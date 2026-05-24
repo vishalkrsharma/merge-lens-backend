@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { verifySignature } from 'src/github/verify-signature';
-import { REVIEW_QUEUE, ReviewJobData } from 'src/queue/queue.constants';
+import { verifySignature } from '@/github/verify-signature';
+import { REVIEW_QUEUE, ReviewJobData } from '@/queue/queue.constants';
 import { GithubPullRequestPayload } from './webhooks.types';
 
 @Injectable()

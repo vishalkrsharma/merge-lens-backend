@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
+import { LoggerModule } from 'nestjs-pino';
 import { HealthModule } from './health/health.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { QueueModule } from './queue/queue.module';
@@ -8,6 +9,10 @@ import { ReviewModule } from './review/review.module';
 import { GithubModule } from './github/github.module';
 import { AiReviewModule } from './ai-review/ai-review.module';
 import { CommentsModule } from './comments/comments.module';
+import { AgentsModule } from './agents/agents.module';
+import { OrchestratorModule } from './orchestrator/orchestrator.module';
+import { RagModule } from './rag/rag.module';
+import { ObservabilityModule } from './observability/observability.module';
 
 @Module({
   imports: [
@@ -18,13 +23,25 @@ import { CommentsModule } from './comments/comments.module';
         connection: { url: config.getOrThrow<string>('REDIS_URL') },
       }),
     }),
+    LoggerModule.forRoot({
+      pinoHttp: {
+        transport: {
+          target: 'pino-pretty',
+          options: { colorize: true, singleLine: true },
+        },
+      },
+    }),
     HealthModule,
     WebhooksModule,
     QueueModule,
     GithubModule,
-    ReviewModule,
     AiReviewModule,
     CommentsModule,
+    AgentsModule,
+    OrchestratorModule,
+    RagModule,
+    ObservabilityModule,
+    ReviewModule,
   ],
 })
 export class AppModule {}

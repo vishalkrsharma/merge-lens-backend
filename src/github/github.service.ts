@@ -9,6 +9,11 @@ export interface PullRequestFile {
   patch?: string;
 }
 
+export interface PullRequestDetails {
+  title: string;
+  description: string;
+}
+
 @Injectable()
 export class GithubService {
   private readonly app: App;
@@ -27,6 +32,23 @@ export class GithubService {
     return this.app.getInstallationOctokit(
       Number(this.config.getOrThrow<string>('GITHUB_INSTALLATION_ID')),
     );
+  }
+
+  async getPRDetails(
+    owner: string,
+    repo: string,
+    pullNumber: number,
+  ): Promise<PullRequestDetails> {
+    const octokit = await this.getInstallationOctokit();
+    const pr = await octokit.rest.pulls.get({
+      owner,
+      repo,
+      pull_number: pullNumber,
+    });
+    return {
+      title: pr.data.title,
+      description: pr.data.body ?? '',
+    };
   }
 
   async getHeadSha(
@@ -55,6 +77,21 @@ export class GithubService {
       pull_number: pullNumber,
     });
     return response.data;
+  }
+
+  async postIssueComment(
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    body: string,
+  ): Promise<void> {
+    const octokit = await this.getInstallationOctokit();
+    await octokit.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number: pullNumber,
+      body,
+    });
   }
 
   async postReviewComment(

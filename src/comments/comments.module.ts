@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CommentsService } from './comments.service';
-import { GithubModule } from 'src/github/github.module';
+import { GithubModule } from '@/github/github.module';
 
 @Module({
   imports: [GithubModule],
