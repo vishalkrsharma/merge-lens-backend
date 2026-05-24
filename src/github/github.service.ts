@@ -17,7 +17,7 @@ export class GithubService {
     this.app = new App({
       appId: this.config.getOrThrow<string>('GITHUB_APP_ID'),
       privateKey: fs.readFileSync(
-        path.resolve(process.cwd(), 'keys/private-key.pem'),
+        path.resolve(process.cwd(), 'keys/merge-lens-private-key.pem'),
         'utf8',
       ),
     });
