@@ -1,23 +1,25 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { VoyageAIClient } from 'voyageai';
 
 @Injectable()
 export class EmbeddingsService {
   private readonly logger = new Logger(EmbeddingsService.name);
-  private readonly genAI: GoogleGenerativeAI;
+  private readonly voyage: VoyageAIClient;
 
   constructor(config: ConfigService) {
-    this.genAI = new GoogleGenerativeAI(config.getOrThrow('GOOGLE_API_KEY'));
+    this.voyage = new VoyageAIClient({
+      apiKey: config.getOrThrow('VOYAGE_API_KEY'),
+    });
   }
 
   async createEmbedding(text: string): Promise<number[]> {
     const truncated = text.slice(0, 8000);
-    const model = this.genAI.getGenerativeModel({
-      model: 'gemini-embedding-2',
+    const result = await this.voyage.embed({
+      model: 'voyage-3',
+      input: [truncated],
     });
-    const result = await model.embedContent(truncated);
-    const embedding = result.embedding.values;
+    const embedding = result.data?.[0]?.embedding;
     if (!Array.isArray(embedding)) {
       throw new Error('Embedding response is not an array');
     }

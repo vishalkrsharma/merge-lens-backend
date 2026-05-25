@@ -1,24 +1,29 @@
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Anthropic from '@anthropic-ai/sdk';
 import { AgentResponse } from './types';
 
 export abstract class BaseAgent {
   protected abstract readonly logger: Logger;
-  protected readonly genAI: GoogleGenerativeAI;
+  protected readonly anthropic: Anthropic;
 
   constructor(config: ConfigService) {
-    this.genAI = new GoogleGenerativeAI(config.getOrThrow('GOOGLE_API_KEY'));
+    this.anthropic = new Anthropic({
+      apiKey: config.getOrThrow('ANTHROPIC_API_KEY'),
+    });
   }
 
   protected async generate(prompt: string): Promise<AgentResponse> {
     try {
-      const model = this.genAI.getGenerativeModel({
-        model: 'gemini-3.5-flash',
+      const message = await this.anthropic.messages.create({
+        model: 'claude-opus-4-7',
+        max_tokens: 16000,
+        thinking: { type: 'adaptive' },
+        messages: [{ role: 'user', content: prompt }],
       });
-      const result = await model.generateContent(prompt);
 
-      const raw = result.response.text() ?? '{"findings":[],"summary":""}';
+      const textBlock = message.content.find((b) => b.type === 'text');
+      const raw = textBlock?.text ?? '{"findings":[],"summary":""}';
       const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
       const jsonStr = jsonMatch ? jsonMatch[1] : raw;
 

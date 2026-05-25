@@ -1,15 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Anthropic from '@anthropic-ai/sdk';
 import { AgentResponse, ReviewContext } from './types';
 
 @Injectable()
 export class SummaryAgent {
   private readonly logger = new Logger(SummaryAgent.name);
-  private readonly genAI: GoogleGenerativeAI;
+  private readonly anthropic: Anthropic;
 
   constructor(config: ConfigService) {
-    this.genAI = new GoogleGenerativeAI(config.getOrThrow('GOOGLE_API_KEY'));
+    this.anthropic = new Anthropic({
+      apiKey: config.getOrThrow('ANTHROPIC_API_KEY'),
+    });
   }
 
   async summarize(
@@ -56,9 +58,13 @@ Write a concise 3-4 sentence overall PR review summary covering:
 Return plain text only, no JSON, no markdown headers.`;
 
     try {
-      const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-      const result = await model.generateContent(prompt);
-      return result.response.text().trim();
+      const message = await this.anthropic.messages.create({
+        model: 'claude-opus-4-7',
+        max_tokens: 1024,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      const textBlock = message.content.find((b) => b.type === 'text');
+      return textBlock?.text.trim() ?? '';
     } catch (err) {
       this.logger.warn(`SummaryAgent failed: ${String(err)}`);
       return `PR review complete. Found ${totalFindings} issues (${highFindings} high severity).`;

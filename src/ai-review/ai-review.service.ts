@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import { REVIEW_PROMPT } from '@/prompt/review.prompt';
 
@@ -18,21 +18,30 @@ export type ReviewComment = z.infer<typeof reviewSchema>[number];
 @Injectable()
 export class AiReviewService {
   private readonly logger = new Logger(AiReviewService.name);
-  private readonly genAI: GoogleGenerativeAI;
+  private readonly anthropic: Anthropic;
 
   constructor(private readonly config: ConfigService) {
-    this.genAI = new GoogleGenerativeAI(
-      this.config.getOrThrow<string>('GOOGLE_API_KEY'),
-    );
+    this.anthropic = new Anthropic({
+      apiKey: this.config.getOrThrow<string>('ANTHROPIC_API_KEY'),
+    });
   }
 
   async reviewCode(diff: string): Promise<ReviewComment[]> {
-    const model = this.genAI.getGenerativeModel({
-      model: 'gemini-3.5-flash',
-      systemInstruction: REVIEW_PROMPT,
+    const message = await this.anthropic.messages.create({
+      model: 'claude-opus-4-7',
+      max_tokens: 16000,
+      system: [
+        {
+          type: 'text',
+          text: REVIEW_PROMPT,
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
+      messages: [{ role: 'user', content: diff }],
     });
-    const result = await model.generateContent(diff);
-    const content = result.response.text() ?? '[]';
+
+    const textBlock = message.content.find((b) => b.type === 'text');
+    const content = textBlock?.text ?? '[]';
 
     this.logger.log(`AI review completed, got response: ${content}`);
 
