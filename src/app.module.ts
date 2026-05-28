@@ -13,6 +13,9 @@ import { AgentsModule } from './agents/agents.module';
 import { OrchestratorModule } from './orchestrator/orchestrator.module';
 import { RagModule } from './rag/rag.module';
 import { ObservabilityModule } from './observability/observability.module';
+import { AuthModule } from '@thallesp/nestjs-better-auth';
+import { auth } from './lib/auth';
+import { PrismaModule } from '@/prisma/prisma.module';
 
 @Module({
   imports: [
@@ -31,6 +34,8 @@ import { ObservabilityModule } from './observability/observability.module';
         },
       },
     }),
+    PrismaModule,
+    AuthModule.forRoot({ auth }),
     HealthModule,
     WebhooksModule,
     QueueModule,

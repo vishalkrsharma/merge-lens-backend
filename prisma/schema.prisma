@@ -1,0 +1,192 @@
+generator client {
+provider     = "prisma-client"
+output       = "../src/generated/prisma"
+moduleFormat = "cjs"
+}
+
+datasource db {
+provider = "postgresql"
+}
+// ─── Enums
+
+enum ReviewStatus {
+pending
+running
+completed
+failed
+}
+
+enum AgentType {
+bug
+security
+performance
+style
+}
+
+enum Severity {
+low
+medium
+high
+}
+
+enum ApiProvider {
+anthropic
+google
+voyage
+}
+
+// ─── BetterAuth models
+
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  repositories  Repository[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ─── MergeLens models
+
+model Repository {
+  id                String      @id
+  owner             String
+  repo              String
+  installationId    Int
+  enabledAgents     AgentType[]
+  severityThreshold Severity    @default(low)
+  installedAt       DateTime    @default(now())
+  userId            String
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews           Review[]
+
+  @@unique([owner, repo, userId])
+  @@index([userId])
+  @@map("repository")
+}
+
+model Review {
+  id            String        @id
+  owner         String
+  repo          String
+  pullNumber    Int
+  prTitle       String
+  prDescription String        @db.Text
+  commitId      String
+  status        ReviewStatus  @default(pending)
+  durationMs    Int           @default(0)
+  completedAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  repositoryId  String
+  repository    Repository    @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  findings      Finding[]
+  summary       ReviewSummary?
+  apiUsageLogs  ApiUsageLog[]
+
+  @@index([repositoryId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("review")
+}
+
+model Finding {
+  id         String    @id
+  agent      AgentType
+  file       String
+  line       Int
+  severity   Severity
+  issue      String    @db.Text
+  suggestion String    @db.Text
+  reviewId   String
+  review     Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+  @@index([reviewId, severity])
+  @@map("finding")
+}
+
+model ReviewSummary {
+  id                 String @id
+  bugSummary         String @db.Text
+  securitySummary    String @db.Text
+  performanceSummary String @db.Text
+  styleSummary       String @db.Text
+  overallSummary     String @db.Text
+  reviewId           String @unique
+  review             Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@map("review_summary")
+}
+
+model ApiUsageLog {
+  id           String      @id
+  provider     ApiProvider
+  calls        Int         @default(0)
+  inputTokens  Int         @default(0)
+  outputTokens Int         @default(0)
+  costCents    Int         @default(0)
+  createdAt    DateTime    @default(now())
+  reviewId     String
+  review       Review      @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+  @@index([provider, createdAt])
+  @@map("api_usage_log")
+}
