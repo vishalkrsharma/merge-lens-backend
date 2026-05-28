@@ -16,6 +16,11 @@ import { ObservabilityModule } from './observability/observability.module';
 import { AuthModule } from '@thallesp/nestjs-better-auth';
 import { auth } from './lib/auth';
 import { PrismaModule } from '@/prisma/prisma.module';
+import { StatsModule } from './stats/stats.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { FindingsModule } from './findings/findings.module';
+import { RepositoriesModule } from './repositories/repositories.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -47,6 +52,11 @@ import { PrismaModule } from '@/prisma/prisma.module';
     RagModule,
     ObservabilityModule,
     ReviewModule,
+    StatsModule,
+    ReviewsModule,
+    FindingsModule,
+    RepositoriesModule,
+    SettingsModule,
   ],
 })
 export class AppModule {}
