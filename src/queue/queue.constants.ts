@@ -4,4 +4,5 @@ export interface ReviewJobData {
   repo: string;
   owner: string;
   pullNumber: number;
+  repositoryId: string;
 }

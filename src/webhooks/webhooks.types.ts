@@ -7,4 +7,7 @@ export interface GithubPullRequestPayload {
       login: string;
     };
   };
+  installation?: {
+    id: number;
+  };
 }

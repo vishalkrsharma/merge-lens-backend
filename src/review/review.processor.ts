@@ -1,6 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
+import { randomUUID } from 'crypto';
 import { ReviewContext } from '@/agents/types';
 import { CommentsService } from '@/comments/comments.service';
 import { GithubService } from '@/github/github.service';
@@ -8,8 +9,11 @@ import { LoggerService } from '@/observability/logger.service';
 import { MetricsService } from '@/observability/metrics.service';
 import { TracingService } from '@/observability/tracing.service';
 import { OrchestratorService } from '@/orchestrator/orchestrator.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { REVIEW_QUEUE, ReviewJobData } from '@/queue/queue.constants';
 import { RetrievalService } from '@/rag/retrieval.service';
+
+const AGENT_TYPES = ['bug', 'security', 'performance', 'style'] as const;
 
 @Processor(REVIEW_QUEUE)
 export class ReviewProcessor extends WorkerHost {
@@ -20,6 +24,7 @@ export class ReviewProcessor extends WorkerHost {
     private readonly orchestrator: OrchestratorService,
     private readonly commentsService: CommentsService,
     private readonly retrieval: RetrievalService,
+    private readonly prisma: PrismaService,
     private readonly appLogger: LoggerService,
     private readonly metrics: MetricsService,
     private readonly tracing: TracingService,
@@ -28,9 +33,10 @@ export class ReviewProcessor extends WorkerHost {
   }
 
   async process(job: Job<ReviewJobData>): Promise<void> {
-    const { repo, owner, pullNumber } = job.data;
+    const { repo, owner, pullNumber, repositoryId } = job.data;
     const reviewStart = Date.now();
     const span = this.tracing.startSpan('review.process');
+    const reviewId = randomUUID();
 
     this.appLogger.webhookReceived(owner, repo, pullNumber);
     this.logger.log(`Processing PR ${owner}/${repo}#${pullNumber}`);
@@ -44,6 +50,20 @@ export class ReviewProcessor extends WorkerHost {
         this.githubService.getChangedFiles(owner, repo, pullNumber),
       ]);
 
+      await this.prisma.review.create({
+        data: {
+          id: reviewId,
+          owner,
+          repo,
+          pullNumber,
+          prTitle: prDetails.title,
+          prDescription: prDetails.description ?? '',
+          commitId,
+          status: 'running',
+          repositoryId,
+        },
+      });
+
       const diff = files
         .filter(
           (f): f is { filename: string; patch: string } =>
@@ -56,6 +76,14 @@ export class ReviewProcessor extends WorkerHost {
         this.logger.warn(
           `PR ${owner}/${repo}#${pullNumber} has no diff, skipping`,
         );
+        await this.prisma.review.update({
+          where: { id: reviewId },
+          data: {
+            status: 'completed',
+            durationMs: Date.now() - reviewStart,
+            completedAt: new Date(),
+          },
+        });
         return;
       }
 
@@ -91,23 +119,64 @@ export class ReviewProcessor extends WorkerHost {
       );
 
       const duration = Date.now() - reviewStart;
+
+      await this.prisma.finding.createMany({
+        data: AGENT_TYPES.flatMap((agent) =>
+          result[agent].findings.map((f) => ({
+            id: randomUUID(),
+            agent,
+            file: f.file,
+            line: f.line,
+            severity: f.severity,
+            issue: f.issue,
+            suggestion: f.suggestion,
+            reviewId,
+          })),
+        ),
+      });
+
+      await this.prisma.reviewSummary.create({
+        data: {
+          id: randomUUID(),
+          bugSummary: result.bug.summary,
+          securitySummary: result.security.summary,
+          performanceSummary: result.performance.summary,
+          styleSummary: result.style.summary,
+          overallSummary: result.overallSummary,
+          reviewId,
+        },
+      });
+
+      await this.prisma.review.update({
+        where: { id: reviewId },
+        data: {
+          status: 'completed',
+          durationMs: duration,
+          completedAt: new Date(),
+        },
+      });
+
       this.appLogger.reviewComplete(owner, repo, pullNumber, duration);
       this.metrics.recordReviewDuration(duration);
 
-      const allFindings = [
-        ...result.bug.findings,
-        ...result.security.findings,
-        ...result.performance.findings,
-        ...result.style.findings,
-      ];
-      for (const finding of allFindings) {
-        this.metrics.recordFindings('all', finding.severity, 1);
+      for (const agent of AGENT_TYPES) {
+        for (const finding of result[agent].findings) {
+          this.metrics.recordFindings(agent, finding.severity, 1);
+        }
       }
     } catch (err) {
       this.appLogger.error(
         `ReviewProcessor(${owner}/${repo}#${pullNumber})`,
         err,
       );
+
+      await this.prisma.review
+        .update({
+          where: { id: reviewId },
+          data: { status: 'failed', durationMs: Date.now() - reviewStart },
+        })
+        .catch(() => {});
+
       throw err;
     } finally {
       span.end();
