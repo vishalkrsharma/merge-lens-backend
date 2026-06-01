@@ -1,0 +1,9 @@
+version: '3'
+agent:
+  authtoken: ${NGROK_AUTH_TOKEN}
+
+tunnels:
+  my-app:
+    proto: http
+    addr: ${PORT}
+    url: https://noncounterfeit-unshriven-thomasina.ngrok-free.dev

@@ -2,25 +2,25 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { LoggerModule } from 'nestjs-pino';
-import { HealthModule } from './health/health.module';
-import { WebhooksModule } from './webhooks/webhooks.module';
-import { QueueModule } from './queue/queue.module';
-import { ReviewModule } from './review/review.module';
-import { GithubModule } from './github/github.module';
-import { AiReviewModule } from './ai-review/ai-review.module';
-import { CommentsModule } from './comments/comments.module';
-import { AgentsModule } from './agents/agents.module';
-import { OrchestratorModule } from './orchestrator/orchestrator.module';
-import { RagModule } from './rag/rag.module';
-import { ObservabilityModule } from './observability/observability.module';
 import { AuthModule } from '@thallesp/nestjs-better-auth';
-import { auth } from './lib/auth';
-import { PrismaModule } from '@/prisma/prisma.module';
-import { StatsModule } from './stats/stats.module';
-import { ReviewsModule } from './reviews/reviews.module';
-import { FindingsModule } from './findings/findings.module';
-import { RepositoriesModule } from './repositories/repositories.module';
-import { SettingsModule } from './settings/settings.module';
+import { auth } from './core/auth/auth';
+import { PrismaModule } from './core/prisma/prisma.module';
+import { QueueModule } from './core/queue/queue.module';
+import { ObservabilityModule } from './core/observability/observability.module';
+import { AgentsModule } from './pipeline/agents/agents.module';
+import { AiReviewModule } from './pipeline/ai-review/ai-review.module';
+import { OrchestratorModule } from './pipeline/orchestrator/orchestrator.module';
+import { ReviewModule } from './pipeline/processor/review.module';
+import { RagModule } from './pipeline/rag/rag.module';
+import { CommentsModule } from './integrations/comments/comments.module';
+import { GithubModule } from './integrations/github/github.module';
+import { FindingsModule } from './modules/findings/findings.module';
+import { HealthModule } from './modules/health/health.module';
+import { RepositoriesModule } from './modules/repositories/repositories.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
+import { SettingsModule } from './modules/settings/settings.module';
+import { StatsModule } from './modules/stats/stats.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -41,22 +41,22 @@ import { SettingsModule } from './settings/settings.module';
     }),
     PrismaModule,
     AuthModule.forRoot({ auth }),
-    HealthModule,
-    WebhooksModule,
+    ObservabilityModule,
     QueueModule,
     GithubModule,
-    AiReviewModule,
     CommentsModule,
     AgentsModule,
+    AiReviewModule,
     OrchestratorModule,
     RagModule,
-    ObservabilityModule,
     ReviewModule,
-    StatsModule,
-    ReviewsModule,
+    HealthModule,
+    WebhooksModule,
     FindingsModule,
     RepositoriesModule,
+    ReviewsModule,
     SettingsModule,
+    StatsModule,
   ],
 })
 export class AppModule {}

@@ -1,0 +1,185 @@
+import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Logger } from '@nestjs/common';
+import { Job } from 'bullmq';
+import { randomUUID } from 'crypto';
+import { ReviewContext } from '@/pipeline/agents/types';
+import { CommentsService } from '@/integrations/comments/comments.service';
+import { GithubService } from '@/integrations/github/github.service';
+import { LoggerService } from '@/core/observability/logger.service';
+import { MetricsService } from '@/core/observability/metrics.service';
+import { TracingService } from '@/core/observability/tracing.service';
+import { OrchestratorService } from '@/pipeline/orchestrator/orchestrator.service';
+import { PrismaService } from '@/core/prisma/prisma.service';
+import { REVIEW_QUEUE, ReviewJobData } from '@/core/queue/queue.constants';
+import { RetrievalService } from '@/pipeline/rag/retrieval.service';
+
+const AGENT_TYPES = ['bug', 'security', 'performance', 'style'] as const;
+
+@Processor(REVIEW_QUEUE)
+export class ReviewProcessor extends WorkerHost {
+  private readonly logger = new Logger(ReviewProcessor.name);
+
+  constructor(
+    private readonly githubService: GithubService,
+    private readonly orchestrator: OrchestratorService,
+    private readonly commentsService: CommentsService,
+    private readonly retrieval: RetrievalService,
+    private readonly prisma: PrismaService,
+    private readonly appLogger: LoggerService,
+    private readonly metrics: MetricsService,
+    private readonly tracing: TracingService,
+  ) {
+    super();
+  }
+
+  async process(job: Job<ReviewJobData>): Promise<void> {
+    const { repo, owner, pullNumber, repositoryId } = job.data;
+    const reviewStart = Date.now();
+    const span = this.tracing.startSpan('review.process');
+    const reviewId = randomUUID();
+
+    this.appLogger.webhookReceived(owner, repo, pullNumber);
+    this.logger.log(`Processing PR ${owner}/${repo}#${pullNumber}`);
+
+    try {
+      this.appLogger.fetchingPR(owner, repo, pullNumber);
+
+      const [prDetails, commitId, files] = await Promise.all([
+        this.githubService.getPRDetails(owner, repo, pullNumber),
+        this.githubService.getHeadSha(owner, repo, pullNumber),
+        this.githubService.getChangedFiles(owner, repo, pullNumber),
+      ]);
+
+      await this.prisma.review.create({
+        data: {
+          id: reviewId,
+          owner,
+          repo,
+          pullNumber,
+          prTitle: prDetails.title,
+          prDescription: prDetails.description ?? '',
+          commitId,
+          status: 'running',
+          repositoryId,
+        },
+      });
+
+      const diff = files
+        .filter(
+          (f): f is { filename: string; patch: string } =>
+            typeof f.patch === 'string' && f.patch.length > 0,
+        )
+        .map((f) => `--- ${f.filename} ---\n${f.patch}`)
+        .join('\n\n');
+
+      if (!diff.trim()) {
+        this.logger.warn(
+          `PR ${owner}/${repo}#${pullNumber} has no diff, skipping`,
+        );
+        await this.prisma.review.update({
+          where: { id: reviewId },
+          data: {
+            status: 'completed',
+            durationMs: Date.now() - reviewStart,
+            completedAt: new Date(),
+          },
+        });
+        return;
+      }
+
+      const fileNames = files
+        .map((f) =>
+          typeof (f as { filename?: unknown })?.filename === 'string'
+            ? (f as { filename: string }).filename
+            : undefined,
+        )
+        .filter((n): n is string => typeof n === 'string');
+      this.logger.log(`Fetched ${files.length} changed files`);
+
+      const docs = await this.retrieval.retrieve(diff.slice(0, 2000));
+      this.appLogger.ragRetrievalComplete(docs.length);
+
+      const context: ReviewContext = {
+        title: prDetails.title,
+        description: prDetails.description,
+        files: fileNames,
+        diff,
+        docs,
+      };
+
+      const result = await this.orchestrator.execute(context);
+
+      this.appLogger.postingComments(owner, repo, pullNumber);
+      await this.commentsService.postOrchestratorResults(
+        owner,
+        repo,
+        pullNumber,
+        commitId,
+        result,
+      );
+
+      const duration = Date.now() - reviewStart;
+
+      await this.prisma.finding.createMany({
+        data: AGENT_TYPES.flatMap((agent) =>
+          result[agent].findings.map((f) => ({
+            id: randomUUID(),
+            agent,
+            file: f.file,
+            line: f.line,
+            severity: f.severity,
+            issue: f.issue,
+            suggestion: f.suggestion,
+            reviewId,
+          })),
+        ),
+      });
+
+      await this.prisma.reviewSummary.create({
+        data: {
+          id: randomUUID(),
+          bugSummary: result.bug.summary,
+          securitySummary: result.security.summary,
+          performanceSummary: result.performance.summary,
+          styleSummary: result.style.summary,
+          overallSummary: result.overallSummary,
+          reviewId,
+        },
+      });
+
+      await this.prisma.review.update({
+        where: { id: reviewId },
+        data: {
+          status: 'completed',
+          durationMs: duration,
+          completedAt: new Date(),
+        },
+      });
+
+      this.appLogger.reviewComplete(owner, repo, pullNumber, duration);
+      this.metrics.recordReviewDuration(duration);
+
+      for (const agent of AGENT_TYPES) {
+        for (const finding of result[agent].findings) {
+          this.metrics.recordFindings(agent, finding.severity, 1);
+        }
+      }
+    } catch (err) {
+      this.appLogger.error(
+        `ReviewProcessor(${owner}/${repo}#${pullNumber})`,
+        err,
+      );
+
+      await this.prisma.review
+        .update({
+          where: { id: reviewId },
+          data: { status: 'failed', durationMs: Date.now() - reviewStart },
+        })
+        .catch(() => {});
+
+      throw err;
+    } finally {
+      span.end();
+    }
+  }
+}

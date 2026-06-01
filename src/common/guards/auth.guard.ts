@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { fromNodeHeaders } from 'better-auth/node';
-import { auth } from '@/lib/auth';
+import { auth } from '@/core/auth/auth';
 
 @Injectable()
 export class AuthGuard implements CanActivate {

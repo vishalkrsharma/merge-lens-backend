@@ -10,7 +10,7 @@
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
-    "start:dev": "docker compose -f redis-compose.yml up -d && nest start --watch",
+    "start:dev": "chmod +x scripts/dev.sh &&bash scripts/dev.sh",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
@@ -20,8 +20,10 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "studio": "prisma studio",
-    "redis:up": "docker compose -f redis-compose.yml up -d",
-    "redis:down": "docker compose -f redis-compose.yml down"
+    "redis:up": "pnpm redis:down && docker compose -f config/redis-compose.yml up -d",
+    "redis:down": "docker compose -f config/redis-compose.yml down",
+    "tunnel:up": "dotenv -e .env -- ngrok start my-app --config config/ngrok.yml & echo $! > .ngrok.pid",
+    "tunnel:down": "kill $(cat .ngrok.pid) && rm .ngrok.pid"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -63,6 +65,7 @@
     "@types/node": "^22.10.7",
     "@types/supertest": "^6.0.2",
     "dotenv": "^17.4.2",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
