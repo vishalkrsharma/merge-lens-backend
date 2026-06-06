@@ -33,7 +33,7 @@ export class ReviewProcessor extends WorkerHost {
   }
 
   async process(job: Job<ReviewJobData>): Promise<void> {
-    const { repo, owner, pullNumber, repositoryId } = job.data;
+    const { repo, owner, pullNumber, repositoryId, installationId } = job.data;
     const reviewStart = Date.now();
     const span = this.tracing.startSpan('review.process');
     const reviewId = randomUUID();
@@ -45,9 +45,9 @@ export class ReviewProcessor extends WorkerHost {
       this.appLogger.fetchingPR(owner, repo, pullNumber);
 
       const [prDetails, commitId, files] = await Promise.all([
-        this.githubService.getPRDetails(owner, repo, pullNumber),
-        this.githubService.getHeadSha(owner, repo, pullNumber),
-        this.githubService.getChangedFiles(owner, repo, pullNumber),
+        this.githubService.getPRDetails(owner, repo, pullNumber, installationId),
+        this.githubService.getHeadSha(owner, repo, pullNumber, installationId),
+        this.githubService.getChangedFiles(owner, repo, pullNumber, installationId),
       ]);
 
       await this.prisma.review.create({
@@ -116,6 +116,7 @@ export class ReviewProcessor extends WorkerHost {
         pullNumber,
         commitId,
         result,
+        installationId,
       );
 
       const duration = Date.now() - reviewStart;

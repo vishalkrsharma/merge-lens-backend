@@ -14,6 +14,7 @@ export class CommentsService {
     pullNumber: number,
     commitId: string,
     result: OrchestratorResult,
+    installationId: number,
   ): Promise<void> {
     const summaryBody = this.buildSummaryComment(result);
     await this.githubService.postIssueComment(
@@ -21,6 +22,7 @@ export class CommentsService {
       repo,
       pullNumber,
       summaryBody,
+      installationId,
     );
     this.logger.log('Posted PR summary comment');
 
@@ -48,6 +50,7 @@ export class CommentsService {
           finding.file,
           finding.line,
           body,
+          installationId,
         );
       } catch {
         this.logger.warn(

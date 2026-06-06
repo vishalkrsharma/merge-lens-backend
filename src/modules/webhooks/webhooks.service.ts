@@ -1,62 +1,63 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
-import { verifySignature } from '@/integrations/github/verify-signature';
-import { PrismaService } from '@/core/prisma/prisma.service';
-import { REVIEW_QUEUE, ReviewJobData } from '@/core/queue/queue.constants';
-import { GithubPullRequestPayload } from './webhooks.types';
+import {
+  GithubWebhookPayload,
+  GithubPullRequestPayload,
+  GithubInstallationPayload,
+  GithubInstallationRepositoriesPayload,
+  GithubIssuesPayload,
+} from './webhooks.types';
+import { PullRequestHandler } from './handlers/pull-request.handler';
+import { InstallationHandler } from './handlers/installation.handler';
+import { IssuesHandler } from './handlers/issues.handler';
 
 @Injectable()
 export class WebhooksService {
   private readonly logger = new Logger(WebhooksService.name);
 
   constructor(
-    @InjectQueue(REVIEW_QUEUE)
-    private readonly reviewQueue: Queue<ReviewJobData>,
-    private readonly prisma: PrismaService,
+    private readonly pullRequestHandler: PullRequestHandler,
+    private readonly installationHandler: InstallationHandler,
+    private readonly issuesHandler: IssuesHandler,
   ) {}
 
-  async handleGithubWebhook(
-    payload: GithubPullRequestPayload,
+  handleGithubWebhook(
+    payload: GithubWebhookPayload,
     headers: Record<string, string>,
   ) {
+    const event = headers['x-github-event'];
     const signature = headers['x-hub-signature-256'];
 
-    if (!['opened', 'synchronize', 'reopened'].includes(payload.action)) {
-      return { ignored: true };
+    this.logger.log(`EVENT: ${event}`);
+    this.logger.log(`ACTION: ${payload.action}`);
+
+    switch (event) {
+      case 'pull_request':
+        return this.pullRequestHandler.handle(
+          event,
+          payload as GithubPullRequestPayload,
+          signature,
+        );
+
+      case 'installation':
+        return this.installationHandler.handle(
+          event,
+          payload as GithubInstallationPayload,
+          signature,
+        );
+
+      case 'installation_repositories':
+        return this.installationHandler.handleRepositories(
+          event,
+          payload as GithubInstallationRepositoriesPayload,
+          signature,
+        );
+
+      case 'issues':
+        return this.issuesHandler.handle(event, payload as GithubIssuesPayload);
+
+      default:
+        this.logger.warn(`Unknown event: ${event}`);
+        return { received: true, event };
     }
-
-    if (!verifySignature(JSON.stringify(payload), signature)) {
-      return { invalidSignature: true };
-    }
-
-    const owner = payload.repository.owner.login;
-    const repo = payload.repository.name;
-
-    const repository = await this.prisma.repository.findFirst({
-      where: {
-        owner,
-        repo,
-        ...(payload.installation?.id
-          ? { installationId: payload.installation.id }
-          : {}),
-      },
-    });
-
-    if (!repository) {
-      this.logger.warn(
-        `Repository ${owner}/${repo} not found in database, skipping webhook`,
-      );
-      return { skipped: true, reason: 'repository not registered' };
-    }
-
-    await this.reviewQueue.add('review', {
-      repo,
-      owner,
-      pullNumber: payload.number,
-      repositoryId: repository.id,
-    });
-
-    return { queued: true };
   }
 }

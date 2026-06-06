@@ -5,4 +5,5 @@ export interface ReviewJobData {
   owner: string;
   pullNumber: number;
   repositoryId: string;
+  installationId: number;
 }

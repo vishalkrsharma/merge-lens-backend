@@ -10,7 +10,7 @@
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
-    "start:dev": "chmod +x scripts/dev.sh &&bash scripts/dev.sh",
+    "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
@@ -19,11 +19,11 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "studio": "prisma studio",
+    "studio": "prisma studio --browser none",
     "redis:up": "pnpm redis:down && docker compose -f config/redis-compose.yml up -d",
     "redis:down": "docker compose -f config/redis-compose.yml down",
-    "tunnel:up": "dotenv -e .env -- ngrok start my-app --config config/ngrok.yml & echo $! > .ngrok.pid",
-    "tunnel:down": "kill $(cat .ngrok.pid) && rm .ngrok.pid"
+    "tunnel:up": "source ./.env && ngrok http --url=https://noncounterfeit-unshriven-thomasina.ngrok-free.dev $PORT",
+    "github:jwt": "dotenv -e .env -- ts-node scripts/get-github-jwt.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -34,6 +34,7 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.4.4",
     "@nestjs/terminus": "^11.1.1",
+    "@octokit/auth-app": "^8.2.0",
     "@octokit/rest": "^22.0.1",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",

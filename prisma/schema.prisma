@@ -37,18 +37,18 @@ voyage
 
 // ─── BetterAuth models
 
-
 model User {
-  id            String    @id
-  name          String
-  email         String
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  repositories  Repository[]
+  id                  String    @id
+  name                String
+  email               String
+  emailVerified       Boolean   @default(false)
+  image               String?
+  hasGithubApp        Boolean  @default(false) @map("has_github_app")
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  sessions            Session[]
+  accounts            Account[]
+  repositories        Repository[]
 
   @@unique([email])
   @@map("user")
@@ -105,13 +105,15 @@ model Verification {
 // ─── MergeLens models
 
 model Repository {
-  id                String      @id
+  id                String      @id @default(cuid())
   owner             String
   repo              String
   installationId    Int
   enabledAgents     AgentType[]
   severityThreshold Severity    @default(low)
   installedAt       DateTime    @default(now())
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
   userId            String
   user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   reviews           Review[]
@@ -154,6 +156,8 @@ model Finding {
   severity   Severity
   issue      String    @db.Text
   suggestion String    @db.Text
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   reviewId   String
   review     Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
@@ -169,10 +173,23 @@ model ReviewSummary {
   performanceSummary String @db.Text
   styleSummary       String @db.Text
   overallSummary     String @db.Text
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
   reviewId           String @unique
   review             Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
   @@map("review_summary")
+}
+
+model PendingInstallation {
+  id              String   @id @default(cuid())
+  githubAccountId String   @unique
+  githubLogin     String
+  installationId  Int
+  repositories    Json?
+  createdAt       DateTime @default(now())
+
+  @@map("pending_installation")
 }
 
 model ApiUsageLog {
@@ -183,6 +200,7 @@ model ApiUsageLog {
   outputTokens Int         @default(0)
   costCents    Int         @default(0)
   createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
   reviewId     String
   review       Review      @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
