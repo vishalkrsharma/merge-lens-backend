@@ -165,7 +165,8 @@ export class RepositoriesController {
         },
         isActive: {
           type: 'boolean',
-          description: 'Enable or disable automatic PR reviews for this repository',
+          description:
+            'Enable or disable automatic PR reviews for this repository',
           example: false,
         },
       },
