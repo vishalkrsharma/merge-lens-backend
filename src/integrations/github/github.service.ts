@@ -29,11 +29,17 @@ export class GithubService {
   constructor(private readonly config: ConfigService) {
     this.app = new App({
       appId: this.config.getOrThrow<string>('GITHUB_APP_ID'),
-      privateKey: fs.readFileSync(
-        path.resolve(process.cwd(), 'keys/merge-lens-private-key.pem'),
-        'utf8',
-      ),
+      privateKey: this.resolvePrivateKey(),
     });
+  }
+
+  private resolvePrivateKey(): string {
+    const envKey = this.config.get<string>('GITHUB_PRIVATE_KEY');
+    if (envKey) return envKey.replace(/\\n/g, '\n');
+    return fs.readFileSync(
+      path.resolve(process.cwd(), 'keys/merge-lens-private-key.pem'),
+      'utf8',
+    );
   }
 
   getInstallationOctokit(installationId: number): Promise<Octokit> {
