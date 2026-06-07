@@ -23,7 +23,7 @@ export const auth = betterAuth({
     github: {
       clientId: process.env.GITHUB_CLIENT_ID as string,
       clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
-      scope: ['user', 'user:email', 'repo'],
+      scope: ['user', 'user:email', 'repo', 'write:org'],
       callbackUrl: `${process.env.FRONTEND_URL}/dashboard`,
     },
   },

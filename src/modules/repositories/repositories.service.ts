@@ -76,9 +76,13 @@ export class RepositoriesService {
     let installationId = existingRepo?.installationId ?? null;
 
     if (!installationId) {
-      installationId = await this.github.getAppInstallationId(
-        account.accessToken,
-      );
+      try {
+        installationId = await this.github.getAppInstallationId(
+          account.accessToken,
+        );
+      } catch (err: any) {
+        this.throwGithubError(err);
+      }
     }
 
     if (!installationId) {
@@ -87,18 +91,17 @@ export class RepositoriesService {
 
     const [owner, repo] = fullName.split('/');
 
-    // Attempt to add repo to the installation (selected-repos mode).
-    // 422 means the installation is in all-repos mode — repo already accessible.
+    // Best-effort: add repo to installation for selected-repos mode.
+    // Failures are intentionally swallowed — the token may lack permission
+    // or the installation may be in all-repos mode. Access is confirmed below.
     try {
       await this.github.addRepoToInstallation(
         account.accessToken,
         installationId,
         repoId,
       );
-    } catch (err: any) {
-      if (err?.status !== 422) {
-        this.throwGithubError(err);
-      }
+    } catch {
+      // verified via listInstallationRepos below
     }
 
     // Confirm the repo is now in the installation's accessible list.
