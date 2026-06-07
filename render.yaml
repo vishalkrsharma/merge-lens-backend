@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: merge-lens-backend
+    runtime: node
+    buildCommand: npm install -g pnpm && pnpm install && pnpm build
+    startCommand: pnpm start:prod
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
