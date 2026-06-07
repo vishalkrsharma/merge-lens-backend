@@ -14,6 +14,7 @@ import { AgentType, Severity } from '@/generated/prisma/enums';
 interface UpdateRepositoryDto {
   enabledAgents?: AgentType[];
   severityThreshold?: Severity;
+  isActive?: boolean;
 }
 
 @Injectable()

@@ -30,6 +30,7 @@ type Repository = {
   owner: string;               // GitHub org or username, e.g. "vishalkrsharma"
   repo: string;                // repo name, e.g. "merge-lens-backend"
   installationId: number;      // GitHub App installation ID (internal, don't display)
+  isActive: boolean;           // whether automatic PR reviews are enabled for this repo
   enabledAgents: AgentType[];  // agents active for this repo
   severityThreshold: Severity; // minimum severity to surface findings
   installedAt: string;         // ISO 8601 — when first added to MergeLens
@@ -87,6 +88,7 @@ List all repositories the user has added to MergeLens, ordered newest-first.
     "installationId": 456,
     "enabledAgents": ["bug", "security"],
     "severityThreshold": "medium",
+    "isActive": true,
     "installedAt": "2026-06-06T10:00:00.000Z",
     "createdAt": "2026-06-06T10:00:00.000Z",
     "updatedAt": "2026-06-06T10:00:00.000Z",
@@ -200,7 +202,8 @@ Update agent configuration for a connected repository. All body fields are optio
 ```json
 {
   "enabledAgents": ["bug", "security"],
-  "severityThreshold": "medium"
+  "severityThreshold": "medium",
+  "isActive": false
 }
 ```
 
@@ -208,6 +211,7 @@ Update agent configuration for a connected repository. All body fields are optio
 |-------|------|--------|
 | `enabledAgents` | `AgentType[]` | `"bug"` `"security"` `"performance"` `"style"` — sends the **full replacement list** |
 | `severityThreshold` | `Severity` | `"low"` `"medium"` `"high"` |
+| `isActive` | `boolean` | `true` to enable PR reviews, `false` to pause them |
 
 **Response `200`** — the updated `Repository` object.
 
@@ -295,6 +299,22 @@ if (sync.removed?.length > 0) {
 
 ---
 
+## Enable / disable PR reviews flow
+
+```
+1. User flips the "Automatic reviews" toggle on a repo
+2. PATCH /repositories/:id { isActive: true | false }
+   → optimistic update the toggle immediately
+   → on error: revert toggle and show error toast
+3. On 200: replace local repo with the returned updated object
+```
+
+When `isActive` is `false`, incoming `pull_request` webhooks for that repo are silently ignored — no review job is queued and no GitHub comment is posted. The repo record and all past reviews are preserved.
+
+Newly added repositories default to `isActive: true`.
+
+---
+
 ## Remove repository flow
 
 ```
@@ -321,7 +341,7 @@ if (sync.removed?.length > 0) {
 | `medium`   | Only medium and high findings are posted |
 | `high`     | Only high-severity findings are posted |
 
-> `enabledAgents: []` means no agents run — treat this as "review disabled" in the UI.
+> `enabledAgents: []` means no agents run — show a warning in the UI but use `isActive: false` (not an empty agents list) as the canonical way to pause reviews.
 
 ---
 

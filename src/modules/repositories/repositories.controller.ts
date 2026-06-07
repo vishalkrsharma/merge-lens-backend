@@ -29,6 +29,7 @@ interface AddRepositoryBody {
 interface UpdateRepositoryBody {
   enabledAgents?: AgentType[];
   severityThreshold?: Severity;
+  isActive?: boolean;
 }
 
 @ApiTags('Repositories')
@@ -161,6 +162,11 @@ export class RepositoriesController {
           type: 'string',
           enum: ['low', 'medium', 'high'],
           example: 'medium',
+        },
+        isActive: {
+          type: 'boolean',
+          description: 'Enable or disable automatic PR reviews for this repository',
+          example: false,
         },
       },
     },

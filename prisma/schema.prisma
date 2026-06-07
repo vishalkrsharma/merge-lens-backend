@@ -109,6 +109,7 @@ model Repository {
   owner             String
   repo              String
   installationId    Int
+  isActive          Boolean     @default(true) @map("is_active")
   enabledAgents     AgentType[]
   severityThreshold Severity    @default(low)
   installedAt       DateTime    @default(now())

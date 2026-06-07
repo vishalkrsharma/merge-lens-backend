@@ -76,6 +76,11 @@ export class PullRequestHandler {
       return { skipped: true, reason: 'repository not registered' };
     }
 
+    if (!repository.isActive) {
+      this.logger.log(`Reviews disabled for ${owner}/${repo}, skipping`);
+      return { skipped: true, reason: 'reviews disabled' };
+    }
+
     await this.reviewQueue.add('review', {
       repo,
       owner,
