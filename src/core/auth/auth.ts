@@ -33,7 +33,7 @@ export const auth = betterAuth({
   },
   trustedOrigins: frontendUrls,
   advanced: {
-    useSecureCookies: process.env.NODE_ENV === 'production',
+    useSecureCookies: true,
     cookies: {
       session_token: {
         attributes: {
