@@ -27,9 +27,15 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     ConfigModule.forRoot({ isGlobal: true }),
     BullModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        connection: { url: config.getOrThrow<string>('REDIS_URL') },
-      }),
+      useFactory: (config: ConfigService) => {
+        const url = config.getOrThrow<string>('REDIS_URL');
+        return {
+          connection: {
+            url,
+            ...(url.startsWith('rediss://') && { tls: {} }),
+          },
+        };
+      },
     }),
     LoggerModule.forRoot({
       pinoHttp: {
