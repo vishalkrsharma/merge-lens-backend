@@ -32,6 +32,17 @@ export const auth = betterAuth({
     },
   },
   trustedOrigins: frontendUrls,
+  advanced: {
+    useSecureCookies: process.env.NODE_ENV === 'production',
+    cookies: {
+      session_token: {
+        attributes: {
+          sameSite: 'none',
+          secure: true,
+        },
+      },
+    },
+  },
   experimental: { joins: true },
   plugins: [openAPI()],
   databaseHooks: {
