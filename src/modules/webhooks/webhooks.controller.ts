@@ -1,9 +1,9 @@
 import { Controller, Post, Body, Headers } from '@nestjs/common';
-import { Public } from '@thallesp/nestjs-better-auth';
+import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import { WebhooksService } from './webhooks.service';
 import type { GithubWebhookPayload } from './webhooks.types';
 
-@Public()
+@AllowAnonymous()
 @Controller('webhooks')
 export class WebhooksController {
   constructor(private readonly webhooksService: WebhooksService) {}
