@@ -5,6 +5,10 @@ import { openAPI } from 'better-auth/plugins';
 
 export const prisma = new PrismaService();
 
+const frontendUrls = process.env.FRONTEND_URLS?.split(',').map((o) =>
+  o.trim(),
+) ?? ['http://localhost:3000'];
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
@@ -24,10 +28,10 @@ export const auth = betterAuth({
       clientId: process.env.GITHUB_CLIENT_ID as string,
       clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
       scope: ['user', 'user:email', 'repo', 'write:org'],
-      callbackUrl: `${process.env.FRONTEND_URL}/dashboard`,
+      callbackUrl: `${frontendUrls[0]}/connect-github`,
     },
   },
-  trustedOrigins: [process.env.FRONTEND_URL || 'http://localhost:3000'],
+  trustedOrigins: frontendUrls,
   experimental: { joins: true },
   plugins: [openAPI()],
   databaseHooks: {
