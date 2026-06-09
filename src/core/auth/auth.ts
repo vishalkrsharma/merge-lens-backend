@@ -10,6 +10,7 @@ const frontendUrls = process.env.FRONTEND_URLS?.split(',').map((o) =>
 ) ?? ['http://localhost:3000'];
 
 export const auth = betterAuth({
+  baseURL: process.env.BETTER_AUTH_URL,
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
   }),
@@ -28,10 +29,19 @@ export const auth = betterAuth({
       clientId: process.env.GITHUB_CLIENT_ID as string,
       clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
       scope: ['user', 'user:email', 'repo', 'write:org'],
-      callbackUrl: `${frontendUrls[0]}/connect-github`,
     },
   },
   trustedOrigins: frontendUrls,
+  account: {
+    // Skips the redundant signed-cookie check in the DB state strategy.
+    // That cookie has a 5-min TTL while the DB state has a 10-min TTL, so
+    // any GitHub auth flow that takes >5 min raises a false state_mismatch.
+    skipStateCookieCheck: true,
+  },
+  onAPIError: {
+    // Redirect auth errors to the frontend instead of the backend root.
+    errorURL: frontendUrls[0],
+  },
   advanced: {
     useSecureCookies: true,
     cookies: {
