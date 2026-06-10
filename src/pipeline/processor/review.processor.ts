@@ -13,6 +13,7 @@ import { PrismaService } from '@/core/prisma/prisma.service';
 import { REVIEW_QUEUE, ReviewJobData } from '@/core/queue/queue.constants';
 import { RetrievalService } from '@/pipeline/rag/retrieval.service';
 import { AgentType, Severity } from '@/generated/prisma/enums';
+import { ApiKeysService } from '@/modules/settings/api-keys.service';
 
 const AGENT_TYPES: AgentType[] = ['bug', 'security', 'performance', 'style'];
 
@@ -33,6 +34,7 @@ export class ReviewProcessor extends WorkerHost {
     private readonly appLogger: LoggerService,
     private readonly metrics: MetricsService,
     private readonly tracing: TracingService,
+    private readonly apiKeysService: ApiKeysService,
   ) {
     super();
   }
@@ -112,7 +114,15 @@ export class ReviewProcessor extends WorkerHost {
         docs,
       };
 
-      const result = await this.orchestrator.execute(context, enabledAgents);
+      const repository = await this.prisma.repository.findUnique({
+        where: { id: repositoryId },
+        select: { userId: true },
+      });
+      const apiKeys = repository
+        ? await this.apiKeysService.getDecrypted(repository.userId)
+        : {};
+
+      const result = await this.orchestrator.execute(context, enabledAgents, apiKeys);
 
       // Apply severity threshold: filter findings before posting to GitHub and saving.
       const filtered = {

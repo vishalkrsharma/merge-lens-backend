@@ -11,11 +11,10 @@ export abstract class BaseAgent {
     this.genAI = new GoogleGenerativeAI(config.getOrThrow('GOOGLE_API_KEY'));
   }
 
-  protected async generate(prompt: string): Promise<AgentResponse> {
+  protected async generate(prompt: string, apiKey?: string): Promise<AgentResponse> {
+    const ai = apiKey ? new GoogleGenerativeAI(apiKey) : this.genAI;
     try {
-      const model = this.genAI.getGenerativeModel({
-        model: 'gemini-3.5-flash',
-      });
+      const model = ai.getGenerativeModel({ model: 'gemini-3.5-flash' });
       const result = await model.generateContent(prompt);
 
       const raw = result.response.text() ?? '{"findings":[],"summary":""}';
