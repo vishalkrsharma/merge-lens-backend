@@ -87,6 +87,8 @@ export class PullRequestHandler {
       pullNumber: payload.number,
       repositoryId: repository.id,
       installationId: repository.installationId,
+      enabledAgents: repository.enabledAgents,
+      severityThreshold: repository.severityThreshold,
     });
 
     return { queued: true };

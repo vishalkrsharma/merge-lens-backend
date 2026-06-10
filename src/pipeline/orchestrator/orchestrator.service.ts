@@ -4,9 +4,12 @@ import { SecurityAgent } from '@/pipeline/agents/security.agent';
 import { PerformanceAgent } from '@/pipeline/agents/performance.agent';
 import { StyleAgent } from '@/pipeline/agents/style.agent';
 import { SummaryAgent } from '@/pipeline/agents/summary.agent';
-import { OrchestratorResult, ReviewContext } from '@/pipeline/agents/types';
+import { AgentResponse, OrchestratorResult, ReviewContext } from '@/pipeline/agents/types';
 import { MetricsService } from '@/core/observability/metrics.service';
 import { TracingService } from '@/core/observability/tracing.service';
+import { AgentType } from '@/generated/prisma/enums';
+
+const DISABLED_AGENT: AgentResponse = { findings: [], summary: '' };
 
 @Injectable()
 export class OrchestratorService {
@@ -22,17 +25,26 @@ export class OrchestratorService {
     private readonly tracing: TracingService,
   ) {}
 
-  async execute(context: ReviewContext): Promise<OrchestratorResult> {
+  async execute(context: ReviewContext, enabledAgents: AgentType[] = []): Promise<OrchestratorResult> {
     const span = this.tracing.startSpan('orchestrator.execute');
-    this.logger.log('Starting multi-agent review in parallel');
+
+    // Empty array means all agents are enabled (default / unconfigured repos).
+    const active = enabledAgents.length === 0
+      ? (['bug', 'security', 'performance', 'style'] as AgentType[])
+      : enabledAgents;
+
+    this.logger.log(`Starting review with agents: ${active.join(', ')}`);
 
     const agentStart = Date.now();
 
+    const run = (name: AgentType, fn: () => Promise<AgentResponse>) =>
+      active.includes(name) ? this.runAgent(name, fn) : Promise.resolve(DISABLED_AGENT);
+
     const [bug, security, performance, style] = await Promise.all([
-      this.runAgent('bug', () => this.bugAgent.review(context)),
-      this.runAgent('security', () => this.securityAgent.review(context)),
-      this.runAgent('performance', () => this.performanceAgent.review(context)),
-      this.runAgent('style', () => this.styleAgent.review(context)),
+      run('bug', () => this.bugAgent.review(context)),
+      run('security', () => this.securityAgent.review(context)),
+      run('performance', () => this.performanceAgent.review(context)),
+      run('style', () => this.styleAgent.review(context)),
     ]);
 
     const agentDuration = Date.now() - agentStart;

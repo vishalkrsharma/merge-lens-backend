@@ -12,8 +12,13 @@ import { OrchestratorService } from '@/pipeline/orchestrator/orchestrator.servic
 import { PrismaService } from '@/core/prisma/prisma.service';
 import { REVIEW_QUEUE, ReviewJobData } from '@/core/queue/queue.constants';
 import { RetrievalService } from '@/pipeline/rag/retrieval.service';
+import { AgentType, Severity } from '@/generated/prisma/enums';
 
-const AGENT_TYPES = ['bug', 'security', 'performance', 'style'] as const;
+const AGENT_TYPES: AgentType[] = ['bug', 'security', 'performance', 'style'];
+
+const SEVERITY_RANK: Record<Severity, number> = { low: 0, medium: 1, high: 2 };
+const meetsThreshold = (severity: string, threshold: Severity) =>
+  (SEVERITY_RANK[severity as Severity] ?? 0) >= SEVERITY_RANK[threshold];
 
 @Processor(REVIEW_QUEUE)
 export class ReviewProcessor extends WorkerHost {
@@ -33,7 +38,7 @@ export class ReviewProcessor extends WorkerHost {
   }
 
   async process(job: Job<ReviewJobData>): Promise<void> {
-    const { repo, owner, pullNumber, repositoryId, installationId } = job.data;
+    const { repo, owner, pullNumber, repositoryId, installationId, enabledAgents, severityThreshold } = job.data;
     const reviewStart = Date.now();
     const span = this.tracing.startSpan('review.process');
     const reviewId = randomUUID();
@@ -107,7 +112,16 @@ export class ReviewProcessor extends WorkerHost {
         docs,
       };
 
-      const result = await this.orchestrator.execute(context);
+      const result = await this.orchestrator.execute(context, enabledAgents);
+
+      // Apply severity threshold: filter findings before posting to GitHub and saving.
+      const filtered = {
+        ...result,
+        bug:         { ...result.bug,         findings: result.bug.findings.filter(f         => meetsThreshold(f.severity, severityThreshold)) },
+        security:    { ...result.security,    findings: result.security.findings.filter(f    => meetsThreshold(f.severity, severityThreshold)) },
+        performance: { ...result.performance, findings: result.performance.findings.filter(f => meetsThreshold(f.severity, severityThreshold)) },
+        style:       { ...result.style,       findings: result.style.findings.filter(f       => meetsThreshold(f.severity, severityThreshold)) },
+      };
 
       this.appLogger.postingComments(owner, repo, pullNumber);
       await this.commentsService.postOrchestratorResults(
@@ -115,7 +129,7 @@ export class ReviewProcessor extends WorkerHost {
         repo,
         pullNumber,
         commitId,
-        result,
+        filtered,
         installationId,
       );
 
@@ -123,7 +137,7 @@ export class ReviewProcessor extends WorkerHost {
 
       await this.prisma.finding.createMany({
         data: AGENT_TYPES.flatMap((agent) =>
-          result[agent].findings.map((f) => ({
+          filtered[agent].findings.map((f) => ({
             id: randomUUID(),
             agent,
             file: f.file,
