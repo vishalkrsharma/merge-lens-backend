@@ -22,8 +22,8 @@
     "studio": "prisma studio --browser none",
     "redis:up": "pnpm redis:down && docker compose -f config/redis-compose.yml up -d",
     "redis:down": "docker compose -f config/redis-compose.yml down",
-    "tunnel:up": "source ./.env && ngrok http --url=https://noncounterfeit-unshriven-thomasina.ngrok-free.dev $PORT",
-    "github:jwt": "dotenv -e .env -- ts-node scripts/get-github-jwt.ts"
+    "tunnel:up": "source ./.env.local && ngrok http --url=https://noncounterfeit-unshriven-thomasina.ngrok-free.dev $PORT",
+    "github:jwt": "dotenv -e .env.local -- ts-node scripts/get-github-jwt.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
