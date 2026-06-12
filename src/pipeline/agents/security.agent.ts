@@ -11,7 +11,7 @@ export class SecurityAgent extends BaseAgent {
     super(config);
   }
 
-  async review(context: ReviewContext): Promise<AgentResponse> {
+  async review(context: ReviewContext, apiKey?: string): Promise<AgentResponse> {
     const prompt = `${this.buildDocsSection(context.docs)}You are a security expert reviewing a GitHub PR for vulnerabilities.
 
 Focus on:
@@ -42,6 +42,6 @@ Return ONLY valid JSON (no explanation, no markdown):
   "summary": "brief summary of security analysis"
 }`;
 
-    return this.generate(prompt);
+    return this.generate(prompt, apiKey);
   }
 }

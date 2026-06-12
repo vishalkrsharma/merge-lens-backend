@@ -20,6 +20,7 @@ export class SummaryAgent {
       performance: AgentResponse;
       style: AgentResponse;
     },
+    apiKey?: string,
   ): Promise<string> {
     const totalFindings =
       results.bug.findings.length +
@@ -55,8 +56,9 @@ Write a concise 3-4 sentence overall PR review summary covering:
 
 Return plain text only, no JSON, no markdown headers.`;
 
+    const ai = apiKey ? new GoogleGenerativeAI(apiKey) : this.genAI;
     try {
-      const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash' });
       const result = await model.generateContent(prompt);
       return result.response.text().trim();
     } catch (err) {

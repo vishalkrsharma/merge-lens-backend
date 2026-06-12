@@ -11,7 +11,7 @@ export class BugAgent extends BaseAgent {
     super(config);
   }
 
-  async review(context: ReviewContext): Promise<AgentResponse> {
+  async review(context: ReviewContext, apiKey?: string): Promise<AgentResponse> {
     const prompt = `${this.buildDocsSection(context.docs)}You are a bug detection expert reviewing a GitHub PR.
 
 Focus on:
@@ -41,6 +41,6 @@ Return ONLY valid JSON (no explanation, no markdown):
   "summary": "brief summary of bug analysis"
 }`;
 
-    return this.generate(prompt);
+    return this.generate(prompt, apiKey);
   }
 }

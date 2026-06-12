@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ApiProvider } from '@/generated/prisma/enums';
 import { BugAgent } from '@/pipeline/agents/bug.agent';
 import { SecurityAgent } from '@/pipeline/agents/security.agent';
 import { PerformanceAgent } from '@/pipeline/agents/performance.agent';
@@ -25,13 +26,19 @@ export class OrchestratorService {
     private readonly tracing: TracingService,
   ) {}
 
-  async execute(context: ReviewContext, enabledAgents: AgentType[] = []): Promise<OrchestratorResult> {
+  async execute(
+    context: ReviewContext,
+    enabledAgents: AgentType[] = [],
+    apiKeys: Partial<Record<ApiProvider, string>> = {},
+  ): Promise<OrchestratorResult> {
     const span = this.tracing.startSpan('orchestrator.execute');
 
     // Empty array means all agents are enabled (default / unconfigured repos).
     const active = enabledAgents.length === 0
       ? (['bug', 'security', 'performance', 'style'] as AgentType[])
       : enabledAgents;
+
+    const googleKey = apiKeys[ApiProvider.google];
 
     this.logger.log(`Starting review with agents: ${active.join(', ')}`);
 
@@ -41,10 +48,10 @@ export class OrchestratorService {
       active.includes(name) ? this.runAgent(name, fn) : Promise.resolve(DISABLED_AGENT);
 
     const [bug, security, performance, style] = await Promise.all([
-      run('bug', () => this.bugAgent.review(context)),
-      run('security', () => this.securityAgent.review(context)),
-      run('performance', () => this.performanceAgent.review(context)),
-      run('style', () => this.styleAgent.review(context)),
+      run('bug', () => this.bugAgent.review(context, googleKey)),
+      run('security', () => this.securityAgent.review(context, googleKey)),
+      run('performance', () => this.performanceAgent.review(context, googleKey)),
+      run('style', () => this.styleAgent.review(context, googleKey)),
     ]);
 
     const agentDuration = Date.now() - agentStart;
@@ -52,16 +59,12 @@ export class OrchestratorService {
     this.metrics.recordAgentDuration('all_agents', agentDuration);
 
     const summaryStart = Date.now();
-    const overallSummary = await this.summaryAgent.summarize(context, {
-      bug,
-      security,
-      performance,
-      style,
-    });
-    this.metrics.recordAgentDuration(
-      'summary_agent',
-      Date.now() - summaryStart,
+    const overallSummary = await this.summaryAgent.summarize(
+      context,
+      { bug, security, performance, style },
+      googleKey,
     );
+    this.metrics.recordAgentDuration('summary_agent', Date.now() - summaryStart);
 
     span.end();
     return { bug, security, performance, style, overallSummary };

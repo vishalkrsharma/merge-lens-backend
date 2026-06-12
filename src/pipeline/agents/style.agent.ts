@@ -11,7 +11,7 @@ export class StyleAgent extends BaseAgent {
     super(config);
   }
 
-  async review(context: ReviewContext): Promise<AgentResponse> {
+  async review(context: ReviewContext, apiKey?: string): Promise<AgentResponse> {
     const prompt = `${this.buildDocsSection(context.docs)}You are a code quality expert reviewing a GitHub PR for style and maintainability.
 
 Focus on:
@@ -42,6 +42,6 @@ Return ONLY valid JSON (no explanation, no markdown):
   "summary": "brief summary of code quality analysis"
 }`;
 
-    return this.generate(prompt);
+    return this.generate(prompt, apiKey);
   }
 }
