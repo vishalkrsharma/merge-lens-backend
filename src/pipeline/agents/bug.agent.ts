@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { ApiProvider } from '@/generated/prisma/enums';
+import { LlmService } from '@/pipeline/llm/llm.service';
 import { BaseAgent } from './base.agent';
 import { AgentResponse, ReviewContext } from './types';
 
@@ -7,11 +8,11 @@ import { AgentResponse, ReviewContext } from './types';
 export class BugAgent extends BaseAgent {
   protected readonly logger = new Logger(BugAgent.name);
 
-  constructor(config: ConfigService) {
-    super(config);
+  constructor(llm: LlmService) {
+    super(llm);
   }
 
-  async review(context: ReviewContext, apiKey?: string): Promise<AgentResponse> {
+  async review(context: ReviewContext, provider: ApiProvider, apiKey: string): Promise<AgentResponse> {
     const prompt = `${this.buildDocsSection(context.docs)}You are a bug detection expert reviewing a GitHub PR.
 
 Focus on:
@@ -41,6 +42,6 @@ Return ONLY valid JSON (no explanation, no markdown):
   "summary": "brief summary of bug analysis"
 }`;
 
-    return this.generate(prompt, apiKey);
+    return this.generate(prompt, provider, apiKey);
   }
 }

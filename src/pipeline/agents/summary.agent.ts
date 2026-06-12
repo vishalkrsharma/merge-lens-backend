@@ -1,16 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { ApiProvider } from '@/generated/prisma/enums';
+import { LlmService } from '@/pipeline/llm/llm.service';
 import { AgentResponse, ReviewContext } from './types';
 
 @Injectable()
 export class SummaryAgent {
   private readonly logger = new Logger(SummaryAgent.name);
-  private readonly genAI: GoogleGenerativeAI;
 
-  constructor(config: ConfigService) {
-    this.genAI = new GoogleGenerativeAI(config.getOrThrow('GOOGLE_API_KEY'));
-  }
+  constructor(private readonly llm: LlmService) {}
 
   async summarize(
     context: ReviewContext,
@@ -20,7 +17,8 @@ export class SummaryAgent {
       performance: AgentResponse;
       style: AgentResponse;
     },
-    apiKey?: string,
+    provider: ApiProvider,
+    apiKey: string,
   ): Promise<string> {
     const totalFindings =
       results.bug.findings.length +
@@ -56,11 +54,9 @@ Write a concise 3-4 sentence overall PR review summary covering:
 
 Return plain text only, no JSON, no markdown headers.`;
 
-    const ai = apiKey ? new GoogleGenerativeAI(apiKey) : this.genAI;
     try {
-      const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash' });
-      const result = await model.generateContent(prompt);
-      return result.response.text().trim();
+      const text = await this.llm.generate(prompt, provider, apiKey);
+      return text.trim() || `PR review complete. Found ${totalFindings} issues (${highFindings} high severity).`;
     } catch (err) {
       this.logger.warn(`SummaryAgent failed: ${String(err)}`);
       return `PR review complete. Found ${totalFindings} issues (${highFindings} high severity).`;
