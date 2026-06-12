@@ -34,12 +34,13 @@ export class GithubService {
   }
 
   private resolvePrivateKey(): string {
-    const envKey = this.config.get<string>('GITHUB_PRIVATE_KEY');
-    if (envKey) return envKey.replace(/\\n/g, '\n');
-    return fs.readFileSync(
-      path.resolve(process.cwd(), 'keys/merge-lens-private-key.pem'),
-      'utf8',
+    const pemPath = path.resolve(
+      process.cwd(),
+      'keys/merge-lens-private-key.pem',
     );
+    if (fs.existsSync(pemPath)) return fs.readFileSync(pemPath, 'utf8');
+    const envKey = this.config.getOrThrow<string>('GITHUB_PRIVATE_KEY');
+    return envKey.replace(/\\n/g, '\n');
   }
 
   getInstallationOctokit(installationId: number): Promise<Octokit> {
