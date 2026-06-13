@@ -118,11 +118,22 @@ export class ReviewProcessor extends WorkerHost {
         where: { id: repositoryId },
         select: { userId: true },
       });
-      const apiKeys = repository
-        ? await this.apiKeysService.getDecrypted(repository.userId)
-        : {};
+      const [apiKeys, user] = repository
+        ? await Promise.all([
+            this.apiKeysService.getDecrypted(repository.userId),
+            this.prisma.user.findUnique({
+              where: { id: repository.userId },
+              select: { preferredProvider: true },
+            }),
+          ])
+        : [{}, null];
 
-      const result = await this.orchestrator.execute(context, enabledAgents, apiKeys);
+      const result = await this.orchestrator.execute(
+        context,
+        enabledAgents,
+        apiKeys,
+        user?.preferredProvider,
+      );
 
       // Apply severity threshold: filter findings before posting to GitHub and saving.
       const filtered = {

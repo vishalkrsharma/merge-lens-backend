@@ -44,7 +44,8 @@ model User {
   email               String
   emailVerified       Boolean   @default(false)
   image               String?
-  hasGithubApp        Boolean  @default(false) @map("has_github_app")
+  hasGithubApp        Boolean    @default(false) @map("has_github_app")
+  preferredProvider   ApiProvider? @map("preferred_provider")
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   sessions            Session[]

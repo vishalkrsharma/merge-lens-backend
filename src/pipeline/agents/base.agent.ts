@@ -1,26 +1,24 @@
 import { Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { ApiProvider } from '@/generated/prisma/enums';
+import { LlmService } from '@/pipeline/llm/llm.service';
 import { AgentResponse } from './types';
 
 export abstract class BaseAgent {
   protected abstract readonly logger: Logger;
-  protected readonly genAI: GoogleGenerativeAI;
 
-  constructor(config: ConfigService) {
-    this.genAI = new GoogleGenerativeAI(config.getOrThrow('GOOGLE_API_KEY'));
-  }
+  constructor(protected readonly llm: LlmService) {}
 
-  protected async generate(prompt: string, apiKey?: string): Promise<AgentResponse> {
-    const ai = apiKey ? new GoogleGenerativeAI(apiKey) : this.genAI;
+  protected async generate(
+    prompt: string,
+    provider: ApiProvider,
+    apiKey: string,
+  ): Promise<AgentResponse> {
+    const raw = await this.llm.generate(prompt, provider, apiKey);
+    if (!raw) return { findings: [], summary: 'Agent failed to produce results' };
+
     try {
-      const model = ai.getGenerativeModel({ model: 'gemini-3.5-flash' });
-      const result = await model.generateContent(prompt);
-
-      const raw = result.response.text() ?? '{"findings":[],"summary":""}';
       const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
       const jsonStr = jsonMatch ? jsonMatch[1] : raw;
-
       return JSON.parse(jsonStr) as AgentResponse;
     } catch (err) {
       this.logger.warn(`Agent failed to parse response: ${String(err)}`);

@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { ApiProvider } from '@/generated/prisma/enums';
 import { PrismaService } from '@/core/prisma/prisma.service';
+
+export type ReviewProvider = typeof REVIEW_PROVIDERS[number];
+export const REVIEW_PROVIDERS = [ApiProvider.google, ApiProvider.anthropic, ApiProvider.openai] as const;
 
 const MONTHLY_LIMIT = 50;
 
@@ -58,5 +62,21 @@ export class SettingsService {
     }));
 
     return { thisMonthReviews, monthlyLimit: MONTHLY_LIMIT, apiUsage };
+  }
+
+  async getPreferredProvider(userId: string): Promise<ReviewProvider | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferredProvider: true },
+    });
+    const p = user?.preferredProvider;
+    return (p && (REVIEW_PROVIDERS as readonly ApiProvider[]).includes(p) ? p : null) as ReviewProvider | null;
+  }
+
+  async setPreferredProvider(userId: string, provider: ReviewProvider | null): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { preferredProvider: provider ?? null },
+    });
   }
 }

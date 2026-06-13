@@ -4,7 +4,7 @@ import { ApiProvider } from '@/generated/prisma/enums';
 import { AuthGuard } from '@/common/guards/auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { ApiKeysService } from './api-keys.service';
-import { SettingsService } from './settings.service';
+import { REVIEW_PROVIDERS, ReviewProvider, SettingsService } from './settings.service';
 
 @ApiTags('Settings')
 @ApiCookieAuth()
@@ -75,5 +75,26 @@ export class SettingsController {
     @Param('provider') provider: ApiProvider,
   ) {
     return this.apiKeysService.remove(user.id, provider);
+  }
+
+  @Get('preferred-provider')
+  @ApiOperation({ summary: "Get user's preferred review AI provider" })
+  @ApiResponse({ status: 200, schema: { properties: { provider: { type: 'string', nullable: true } } } })
+  getPreferredProvider(@CurrentUser() user: { id: string }) {
+    return this.settingsService.getPreferredProvider(user.id).then((provider) => ({ provider }));
+  }
+
+  @Put('preferred-provider')
+  @HttpCode(204)
+  @ApiOperation({ summary: "Set user's preferred review AI provider" })
+  @ApiResponse({ status: 204 })
+  @ApiResponse({ status: 400, description: 'Invalid provider' })
+  setPreferredProvider(
+    @CurrentUser() user: { id: string },
+    @Body() body: { provider: ReviewProvider | null },
+  ) {
+    const valid = body.provider === null || (REVIEW_PROVIDERS as readonly string[]).includes(body.provider);
+    if (!valid) throw new Error(`Invalid provider: ${String(body.provider)}`);
+    return this.settingsService.setPreferredProvider(user.id, body.provider);
   }
 }
