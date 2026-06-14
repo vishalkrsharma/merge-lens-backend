@@ -1,9 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
 import { verifySignature } from '@/integrations/github/verify-signature';
 import { PrismaService } from '@/core/prisma/prisma.service';
-import { REVIEW_QUEUE, ReviewJobData } from '@/core/queue/queue.constants';
+import { QueueService } from '@/core/queue/queue.service';
 import { GithubPullRequestPayload } from '../webhooks.types';
 
 @Injectable()
@@ -11,8 +9,7 @@ export class PullRequestHandler {
   private readonly logger = new Logger(PullRequestHandler.name);
 
   constructor(
-    @InjectQueue(REVIEW_QUEUE)
-    private readonly reviewQueue: Queue<ReviewJobData>,
+    private readonly queueService: QueueService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -81,7 +78,7 @@ export class PullRequestHandler {
       return { skipped: true, reason: 'reviews disabled' };
     }
 
-    await this.reviewQueue.add('review', {
+    await this.queueService.addReviewJob({
       repo,
       owner,
       pullNumber: payload.number,

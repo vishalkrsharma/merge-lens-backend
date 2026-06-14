@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { BullModule } from '@nestjs/bullmq';
+import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { AuthModule } from '@thallesp/nestjs-better-auth';
 import { auth } from './core/auth/auth';
@@ -27,18 +26,6 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
-    }),
-    BullModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
-        const url = config.getOrThrow<string>('REDIS_URL');
-        return {
-          connection: {
-            url,
-            ...(url.startsWith('rediss://') && { tls: {} }),
-          },
-        };
-      },
     }),
     LoggerModule.forRoot({
       pinoHttp: {
