@@ -25,6 +25,6 @@ COPY --from=builder /app/src/generated ./src/generated
 COPY prisma ./prisma
 COPY prisma.config.ts ./
 
-EXPOSE 3000
+EXPOSE 8080
 
 CMD ["node", "dist/src/main"]
