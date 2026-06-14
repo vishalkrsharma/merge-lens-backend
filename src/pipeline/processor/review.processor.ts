@@ -1,6 +1,5 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
-import { Job } from 'bullmq';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import PgBoss from 'pg-boss';
 import { randomUUID } from 'crypto';
 import { ReviewContext } from '@/pipeline/agents/types';
 import { CommentsService } from '@/integrations/comments/comments.service';
@@ -10,6 +9,7 @@ import { MetricsService } from '@/core/observability/metrics.service';
 import { TracingService } from '@/core/observability/tracing.service';
 import { OrchestratorService } from '@/pipeline/orchestrator/orchestrator.service';
 import { PrismaService } from '@/core/prisma/prisma.service';
+import { PG_BOSS } from '@/core/queue/queue.module';
 import { REVIEW_QUEUE, ReviewJobData } from '@/core/queue/queue.constants';
 import { RetrievalService } from '@/pipeline/rag/retrieval.service';
 import { AgentType, Severity } from '@/generated/prisma/enums';
@@ -21,11 +21,12 @@ const SEVERITY_RANK: Record<Severity, number> = { low: 0, medium: 1, high: 2 };
 const meetsThreshold = (severity: string, threshold: Severity) =>
   (SEVERITY_RANK[severity as Severity] ?? 0) >= SEVERITY_RANK[threshold];
 
-@Processor(REVIEW_QUEUE)
-export class ReviewProcessor extends WorkerHost {
+@Injectable()
+export class ReviewProcessor implements OnModuleInit {
   private readonly logger = new Logger(ReviewProcessor.name);
 
   constructor(
+    @Inject(PG_BOSS) private readonly boss: PgBoss,
     private readonly githubService: GithubService,
     private readonly orchestrator: OrchestratorService,
     private readonly commentsService: CommentsService,
@@ -35,11 +36,15 @@ export class ReviewProcessor extends WorkerHost {
     private readonly metrics: MetricsService,
     private readonly tracing: TracingService,
     private readonly apiKeysService: ApiKeysService,
-  ) {
-    super();
+  ) {}
+
+  async onModuleInit() {
+    await this.boss.work<ReviewJobData>(REVIEW_QUEUE, (jobs) =>
+      Promise.all(jobs.map((job) => this.process(job))),
+    );
   }
 
-  async process(job: Job<ReviewJobData>): Promise<void> {
+  async process(job: PgBoss.Job<ReviewJobData>): Promise<void> {
     const { repo, owner, pullNumber, repositoryId, installationId, enabledAgents, severityThreshold } = job.data;
     const reviewStart = Date.now();
     const span = this.tracing.startSpan('review.process');

@@ -1,13 +1,28 @@
 import { Module } from '@nestjs/common';
-import { BullModule } from '@nestjs/bullmq';
-import { REVIEW_QUEUE } from './queue.constants';
+import { ConfigService } from '@nestjs/config';
+import PgBoss from 'pg-boss';
+import { QueueService } from './queue.service';
+
+export const PG_BOSS = 'PG_BOSS';
 
 @Module({
-  imports: [
-    BullModule.registerQueue({
-      name: REVIEW_QUEUE,
-    }),
+  providers: [
+    {
+      provide: PG_BOSS,
+      inject: [ConfigService],
+      useFactory: async (config: ConfigService) => {
+        const boss = new PgBoss({
+          connectionString: config.getOrThrow<string>('DATABASE_URL'),
+          max: 3,
+          deleteAfterDays: 7,
+          monitorStateIntervalSeconds: 120,
+        });
+        await boss.start();
+        return boss;
+      },
+    },
+    QueueService,
   ],
-  exports: [BullModule],
+  exports: [PG_BOSS, QueueService],
 })
 export class QueueModule {}
