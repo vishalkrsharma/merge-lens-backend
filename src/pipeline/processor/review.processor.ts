@@ -9,7 +9,7 @@ import { MetricsService } from '@/core/observability/metrics.service';
 import { TracingService } from '@/core/observability/tracing.service';
 import { OrchestratorService } from '@/pipeline/orchestrator/orchestrator.service';
 import { PrismaService } from '@/core/prisma/prisma.service';
-import { PG_BOSS } from '@/core/queue/queue.module';
+import { PG_BOSS } from '@/core/queue/queue.constants';
 import { REVIEW_QUEUE, ReviewJobData } from '@/core/queue/queue.constants';
 import { RetrievalService } from '@/pipeline/rag/retrieval.service';
 import { AgentType, Severity } from '@/generated/prisma/enums';
