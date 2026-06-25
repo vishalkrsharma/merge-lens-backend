@@ -1,6 +1,6 @@
 import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
 import PgBoss from 'pg-boss';
-import { PG_BOSS } from './queue.module';
+import { PG_BOSS } from './queue.constants';
 import { REVIEW_QUEUE, ReviewJobData } from './queue.constants';
 
 @Injectable()

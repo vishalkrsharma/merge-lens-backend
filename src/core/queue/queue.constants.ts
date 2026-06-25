@@ -1,5 +1,6 @@
 import { AgentType, Severity } from '@/generated/prisma/enums';
 
+export const PG_BOSS = 'PG_BOSS';
 export const REVIEW_QUEUE = 'review-pr';
 
 export interface ReviewJobData {

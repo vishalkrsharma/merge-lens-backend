@@ -1,9 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import PgBoss from 'pg-boss';
+import { PG_BOSS } from './queue.constants';
 import { QueueService } from './queue.service';
-
-export const PG_BOSS = 'PG_BOSS';
 
 @Module({
   providers: [
