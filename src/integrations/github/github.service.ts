@@ -159,12 +159,29 @@ export class GithubService {
     pullNumber: number,
     body: string,
     installationId: number,
-  ): Promise<void> {
+  ): Promise<number> {
     const octokit = await this.getInstallationOctokit(installationId);
-    await octokit.rest.issues.createComment({
+    const { data } = await octokit.rest.issues.createComment({
       owner,
       repo,
       issue_number: pullNumber,
+      body,
+    });
+    return data.id;
+  }
+
+  async updateIssueComment(
+    owner: string,
+    repo: string,
+    commentId: number,
+    body: string,
+    installationId: number,
+  ): Promise<void> {
+    const octokit = await this.getInstallationOctokit(installationId);
+    await octokit.rest.issues.updateComment({
+      owner,
+      repo,
+      comment_id: commentId,
       body,
     });
   }

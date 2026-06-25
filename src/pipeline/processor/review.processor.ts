@@ -53,6 +53,13 @@ export class ReviewProcessor implements OnModuleInit {
     this.appLogger.webhookReceived(owner, repo, pullNumber);
     this.logger.log(`Processing PR ${owner}/${repo}#${pullNumber}`);
 
+    const startCommentId = await this.commentsService.postStartComment(
+      owner,
+      repo,
+      pullNumber,
+      installationId,
+    );
+
     try {
       this.appLogger.fetchingPR(owner, repo, pullNumber);
 
@@ -157,6 +164,7 @@ export class ReviewProcessor implements OnModuleInit {
         commitId,
         filtered,
         installationId,
+        startCommentId,
       );
 
       const duration = Date.now() - reviewStart;
@@ -209,6 +217,13 @@ export class ReviewProcessor implements OnModuleInit {
       this.appLogger.error(
         `ReviewProcessor(${owner}/${repo}#${pullNumber})`,
         err,
+      );
+
+      await this.commentsService.editToErrorComment(
+        owner,
+        repo,
+        startCommentId,
+        installationId,
       );
 
       await this.prisma.review
