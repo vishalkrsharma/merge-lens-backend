@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { ApiProvider, AgentType } from '@/generated/prisma/enums';
 import { BugAgent } from '@/pipeline/agents/bug.agent';
 import { SecurityAgent } from '@/pipeline/agents/security.agent';
@@ -24,7 +23,6 @@ export class OrchestratorService {
     private readonly summaryAgent: SummaryAgent,
     private readonly metrics: MetricsService,
     private readonly tracing: TracingService,
-    private readonly config: ConfigService,
   ) {}
 
   async execute(
@@ -81,16 +79,9 @@ export class OrchestratorService {
 
     if (userKey) return { provider: target, apiKey: userKey };
 
-    if (target !== ApiProvider.google) {
-      this.logger.warn(
-        `No API key for preferred provider ${String(target)}, falling back to google system key`,
-      );
-    }
-
-    return {
-      provider: ApiProvider.google,
-      apiKey: this.config.getOrThrow<string>('GOOGLE_API_KEY'),
-    };
+    throw new Error(
+      `No API key configured for provider "${String(target)}". Add your key at Settings → AI Models.`,
+    );
   }
 
   private async runAgent<T>(name: string, fn: () => Promise<T>): Promise<T> {

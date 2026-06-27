@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
@@ -16,27 +15,18 @@ const MODELS: Record<ApiProvider, string> = {
 export class LlmService {
   private readonly logger = new Logger(LlmService.name);
 
-  constructor(private readonly config: ConfigService) {}
+  constructor() {}
 
   async generate(prompt: string, provider: ApiProvider, apiKey: string): Promise<string> {
-    try {
-      switch (provider) {
-        case ApiProvider.google:
-          return await this.generateGoogle(prompt, apiKey);
-        case ApiProvider.anthropic:
-          return await this.generateAnthropic(prompt, apiKey);
-        case ApiProvider.openai:
-          return await this.generateOpenAI(prompt, apiKey);
-        default:
-          this.logger.warn(`Unsupported provider ${String(provider)}, falling back to google`);
-          return await this.generateGoogle(
-            prompt,
-            this.config.getOrThrow<string>('GOOGLE_API_KEY'),
-          );
-      }
-    } catch (err) {
-      this.logger.warn(`LLM generate failed (${String(provider)}): ${String(err)}`);
-      return '';
+    switch (provider) {
+      case ApiProvider.google:
+        return await this.generateGoogle(prompt, apiKey);
+      case ApiProvider.anthropic:
+        return await this.generateAnthropic(prompt, apiKey);
+      case ApiProvider.openai:
+        return await this.generateOpenAI(prompt, apiKey);
+      default:
+        throw new Error(`Unsupported provider: ${String(provider)}`);
     }
   }
 
