@@ -1,4 +1,5 @@
-import { Controller, Post, Body, Headers } from '@nestjs/common';
+import { Controller, Post, Body, Headers, Req } from '@nestjs/common';
+import { Request } from 'express';
 import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import { WebhooksService } from './webhooks.service';
 import type { GithubWebhookPayload } from './webhooks.types';
@@ -12,7 +13,8 @@ export class WebhooksController {
   async handleGithubWebhook(
     @Body() payload: GithubWebhookPayload,
     @Headers() headers: Record<string, string>,
+    @Req() req: Request & { rawBody?: string },
   ) {
-    return this.webhooksService.handleGithubWebhook(payload, headers);
+    return this.webhooksService.handleGithubWebhook(payload, headers, req.rawBody ?? '');
   }
 }

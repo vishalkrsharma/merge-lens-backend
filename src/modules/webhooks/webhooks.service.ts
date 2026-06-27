@@ -23,6 +23,7 @@ export class WebhooksService {
   handleGithubWebhook(
     payload: GithubWebhookPayload,
     headers: Record<string, string>,
+    rawBody: string,
   ) {
     const event = headers['x-github-event'];
     const signature = headers['x-hub-signature-256'];
@@ -36,6 +37,7 @@ export class WebhooksService {
           event,
           payload as GithubPullRequestPayload,
           signature,
+          rawBody,
         );
 
       case 'installation':
@@ -43,6 +45,7 @@ export class WebhooksService {
           event,
           payload as GithubInstallationPayload,
           signature,
+          rawBody,
         );
 
       case 'installation_repositories':
@@ -50,6 +53,7 @@ export class WebhooksService {
           event,
           payload as GithubInstallationRepositoriesPayload,
           signature,
+          rawBody,
         );
 
       case 'issues':

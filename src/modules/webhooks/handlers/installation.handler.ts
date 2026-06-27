@@ -14,8 +14,9 @@ export class InstallationHandler {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  handle(event: string, payload: GithubInstallationPayload, signature: string) {
-    if (!verifySignature(JSON.stringify(payload), signature)) {
+  handle(event: string, payload: GithubInstallationPayload, signature: string, rawBody: string) {
+    if (!verifySignature(rawBody, signature)) {
+      this.logger.warn('Webhook signature verification failed');
       return { invalidSignature: true };
     }
 
@@ -42,8 +43,10 @@ export class InstallationHandler {
     event: string,
     payload: GithubInstallationRepositoriesPayload,
     signature: string,
+    rawBody: string,
   ) {
-    if (!verifySignature(JSON.stringify(payload), signature)) {
+    if (!verifySignature(rawBody, signature)) {
+      this.logger.warn('Webhook signature verification failed');
       return { invalidSignature: true };
     }
 
