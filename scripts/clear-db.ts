@@ -1,24 +1,37 @@
-import { PrismaClient } from '@/generated/prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
-const prisma = new PrismaClient({ adapter });
+import { Client } from 'pg';
 
 async function main() {
-  const tablenames = await prisma.$queryRaw<{ tablename: string }[]>`
-    SELECT tablename FROM pg_tables WHERE schemaname='public'
-  `;
+  const client = new Client({ connectionString: process.env.DATABASE_URL! });
+  await client.connect();
 
-  const tables = tablenames
-    .map(({ tablename }) => tablename)
-    .filter((name) => name !== '_prisma_migrations')
-    .map((name) => `"public"."${name}"`)
-    .join(', ');
+  await client.query(`
+    DO $$
+    DECLARE
+        r RECORD;
+    BEGIN
+        FOR r IN (
+            SELECT tablename FROM pg_tables
+            WHERE schemaname = 'public'
+            AND tablename != '_prisma_migrations'
+        ) LOOP
+            EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE';
+        END LOOP;
 
-  await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tables} CASCADE;`);
+        FOR r IN (
+            SELECT tablename FROM pg_tables
+            WHERE schemaname = 'pgboss'
+            AND tablename NOT IN ('queue', 'version', 'schedule')
+        ) LOOP
+            EXECUTE 'TRUNCATE TABLE pgboss.' || quote_ident(r.tablename) || ' CASCADE';
+        END LOOP;
+    END $$;
+  `);
+
   console.log('✅ All tables cleared!');
+  await client.end();
 }
 
-main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect());
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
