@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiCookieAuth,
   ApiOperation,
@@ -69,5 +69,15 @@ export class ReviewsController {
   @ApiResponse({ status: 404, description: 'Review not found or not owned by the user' })
   getReview(@Param('id') id: string, @CurrentUser() user: { id: string }) {
     return this.reviewsService.getReview(id, user.id);
+  }
+
+  @Post(':id/retry')
+  @ApiOperation({ summary: 'Retry a failed review' })
+  @ApiParam({ name: 'id', description: 'Review ID' })
+  @ApiResponse({ status: 200, description: 'Review requeued' })
+  @ApiResponse({ status: 400, description: 'Review is not in failed state' })
+  @ApiResponse({ status: 404, description: 'Review not found' })
+  retryReview(@Param('id') id: string, @CurrentUser() user: { id: string }) {
+    return this.reviewsService.retryReview(id, user.id);
   }
 }
