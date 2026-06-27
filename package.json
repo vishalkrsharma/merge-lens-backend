@@ -22,7 +22,9 @@
     "studio": "dotenv -e .env.local -- prisma studio --browser none",
     "tunnel:up": "source ./.env.local && ngrok http --url=https://noncounterfeit-unshriven-thomasina.ngrok-free.dev $PORT",
     "github:jwt": "dotenv -e .env.local -- ts-node scripts/get-github-jwt.ts",
-    "db:push": "dotenv -e .env.local -- prisma db push"
+    "db:push": "dotenv -e .env.local -- prisma db push",
+    "db:reset": "dotenv -e .env.local -- ts-node scripts/clear-db.ts",
+    "github:reset": "dotenv -e .env.local -- ts-node scripts/reset-github.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
@@ -41,6 +43,7 @@
     "@thallesp/nestjs-better-auth": "^2.6.0",
     "@types/pg": "^8.20.0",
     "better-auth": "^1.6.11",
+    "express": "^5.2.1",
     "nestjs-pino": "^4.6.1",
     "octokit": "^5.0.5",
     "openai": "^6.42.0",

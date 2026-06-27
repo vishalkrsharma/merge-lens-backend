@@ -8,7 +8,7 @@ export class QueueService implements OnApplicationShutdown {
   constructor(@Inject(PG_BOSS) private readonly boss: PgBoss) {}
 
   async addReviewJob(data: ReviewJobData): Promise<string | null> {
-    return this.boss.send(REVIEW_QUEUE, data);
+    return this.boss.send(REVIEW_QUEUE, data, { retryLimit: 0 });
   }
 
   async onApplicationShutdown() {

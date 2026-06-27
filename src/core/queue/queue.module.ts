@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import PgBoss from 'pg-boss';
-import { PG_BOSS } from './queue.constants';
+import { PG_BOSS, REVIEW_QUEUE } from './queue.constants';
 import { QueueService } from './queue.service';
 
 @Module({
@@ -17,6 +17,7 @@ import { QueueService } from './queue.service';
           monitorStateIntervalSeconds: 120,
         });
         await boss.start();
+        await boss.createQueue(REVIEW_QUEUE, { name: REVIEW_QUEUE, retryLimit: 0 });
         return boss;
       },
     },

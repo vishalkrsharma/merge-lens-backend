@@ -5,11 +5,22 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import { auth } from '@/core/auth/auth';
+import express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bodyParser: false,
   });
+
+  // Capture raw body for webhook HMAC verification before any other middleware consumes the stream
+  app.use(
+    '/api/webhooks',
+    express.json({
+      verify: (req: express.Request & { rawBody?: string }, _res, buf) => {
+        req.rawBody = buf.toString('utf-8');
+      },
+    }),
+  );
   app.enableCors({
     origin: process.env.FRONTEND_URLS?.split(',').map((o) => o.trim()) ?? [],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

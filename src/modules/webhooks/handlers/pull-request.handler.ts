@@ -13,12 +13,17 @@ export class PullRequestHandler {
     private readonly prisma: PrismaService,
   ) {}
 
-  handle(event: string, payload: GithubPullRequestPayload, signature: string) {
+  handle(
+    event: string,
+    payload: GithubPullRequestPayload,
+    signature: string,
+    rawBody: string,
+  ) {
     switch (payload.action) {
       case 'opened':
       case 'synchronize':
       case 'reopened':
-        return this.handleReviewable(payload, signature);
+        return this.handleReviewable(payload, signature, rawBody);
 
       case 'closed':
       case 'assigned':
@@ -48,8 +53,10 @@ export class PullRequestHandler {
   private async handleReviewable(
     payload: GithubPullRequestPayload,
     signature: string,
+    rawBody: string,
   ) {
-    if (!verifySignature(JSON.stringify(payload), signature)) {
+    if (!verifySignature(rawBody, signature)) {
+      this.logger.warn('Webhook signature verification failed');
       return { invalidSignature: true };
     }
 

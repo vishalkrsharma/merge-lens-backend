@@ -48,7 +48,7 @@ export class ReviewProcessor implements OnModuleInit {
     const { repo, owner, pullNumber, repositoryId, installationId, enabledAgents, severityThreshold } = job.data;
     const reviewStart = Date.now();
     const span = this.tracing.startSpan('review.process');
-    const reviewId = randomUUID();
+    const reviewId = job.data.reviewId ?? randomUUID();
 
     this.appLogger.webhookReceived(owner, repo, pullNumber);
     this.logger.log(`Processing PR ${owner}/${repo}#${pullNumber}`);
@@ -69,19 +69,31 @@ export class ReviewProcessor implements OnModuleInit {
         this.githubService.getChangedFiles(owner, repo, pullNumber, installationId),
       ]);
 
-      await this.prisma.review.create({
-        data: {
-          id: reviewId,
-          owner,
-          repo,
-          pullNumber,
-          prTitle: prDetails.title,
-          prDescription: prDetails.description ?? '',
-          commitId,
-          status: 'running',
-          repositoryId,
-        },
-      });
+      if (job.data.reviewId) {
+        await this.prisma.review.update({
+          where: { id: reviewId },
+          data: {
+            prTitle: prDetails.title,
+            prDescription: prDetails.description ?? '',
+            commitId,
+            status: 'running',
+          },
+        });
+      } else {
+        await this.prisma.review.create({
+          data: {
+            id: reviewId,
+            owner,
+            repo,
+            pullNumber,
+            prTitle: prDetails.title,
+            prDescription: prDetails.description ?? '',
+            commitId,
+            status: 'running',
+            repositoryId,
+          },
+        });
+      }
 
       const diff = files
         .filter(
