@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ApiProvider } from '@/generated/prisma/enums';
 import { PrismaService } from '@/core/prisma/prisma.service';
+import { MODEL_CATALOG, ModelEntry, findModel } from '@/pipeline/llm/model-catalog';
 
 export type ReviewProvider = typeof REVIEW_PROVIDERS[number];
 export const REVIEW_PROVIDERS = [ApiProvider.google, ApiProvider.anthropic, ApiProvider.openai] as const;
@@ -77,6 +78,29 @@ export class SettingsService {
     await this.prisma.user.update({
       where: { id: userId },
       data: { preferredProvider: provider ?? null },
+    });
+  }
+
+  getModels(): ModelEntry[] {
+    return MODEL_CATALOG;
+  }
+
+  async getPreferredModel(userId: string): Promise<string | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferredModel: true },
+    });
+    const m = user?.preferredModel;
+    return (m && findModel(m)) ? m : null;
+  }
+
+  async setPreferredModel(userId: string, modelId: string | null): Promise<void> {
+    if (modelId !== null && !findModel(modelId)) {
+      throw new Error(`Unknown model: ${modelId}`);
+    }
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { preferredModel: modelId ?? null },
     });
   }
 }

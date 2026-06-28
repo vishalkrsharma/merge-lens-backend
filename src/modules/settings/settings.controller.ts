@@ -97,4 +97,30 @@ export class SettingsController {
     if (!valid) throw new Error(`Invalid provider: ${String(body.provider)}`);
     return this.settingsService.setPreferredProvider(user.id, body.provider);
   }
+
+  @Get('models')
+  @ApiOperation({ summary: 'List all available AI models' })
+  @ApiResponse({ status: 200, schema: { type: 'array' } })
+  getModels() {
+    return this.settingsService.getModels();
+  }
+
+  @Get('preferred-model')
+  @ApiOperation({ summary: "Get user's preferred AI model" })
+  @ApiResponse({ status: 200, schema: { properties: { model: { type: 'string', nullable: true } } } })
+  getPreferredModel(@CurrentUser() user: { id: string }) {
+    return this.settingsService.getPreferredModel(user.id).then((model) => ({ model }));
+  }
+
+  @Put('preferred-model')
+  @HttpCode(204)
+  @ApiOperation({ summary: "Set user's preferred AI model" })
+  @ApiResponse({ status: 204 })
+  @ApiResponse({ status: 400, description: 'Unknown model ID' })
+  setPreferredModel(
+    @CurrentUser() user: { id: string },
+    @Body() body: { model: string | null },
+  ) {
+    return this.settingsService.setPreferredModel(user.id, body.model);
+  }
 }

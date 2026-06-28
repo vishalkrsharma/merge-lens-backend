@@ -12,7 +12,7 @@ export class PerformanceAgent extends BaseAgent {
     super(llm);
   }
 
-  async review(context: ReviewContext, provider: ApiProvider, apiKey: string): Promise<AgentResponse> {
+  async review(context: ReviewContext, provider: ApiProvider, apiKey: string, modelId: string): Promise<AgentResponse> {
     const prompt = `${this.buildDocsSection(context.docs)}You are a performance optimization expert reviewing a GitHub PR.
 
 Focus on:
@@ -43,6 +43,6 @@ Return ONLY valid JSON (no explanation, no markdown):
   "summary": "brief summary of performance analysis"
 }`;
 
-    return this.generate(prompt, provider, apiKey);
+    return this.generate(prompt, provider, apiKey, modelId);
   }
 }
