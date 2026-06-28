@@ -4,13 +4,20 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { ApiProvider } from '@/generated/prisma/enums';
 
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
+
 @Injectable()
 export class LlmService {
   private readonly logger = new Logger(LlmService.name);
 
   constructor() {}
 
-  async generate(prompt: string, provider: ApiProvider, apiKey: string, modelId: string): Promise<string> {
+  async generate(
+    prompt: string,
+    provider: ApiProvider,
+    apiKey: string,
+    modelId: string,
+  ): Promise<string> {
     switch (provider) {
       case ApiProvider.google:
         return await this.generateGoogle(prompt, apiKey, modelId);
@@ -18,19 +25,29 @@ export class LlmService {
         return await this.generateAnthropic(prompt, apiKey, modelId);
       case ApiProvider.openai:
         return await this.generateOpenAI(prompt, apiKey, modelId);
+      case ApiProvider.ollama:
+        return await this.generateOllama(prompt, apiKey, modelId);
       default:
         throw new Error(`Unsupported provider: ${String(provider)}`);
     }
   }
 
-  private async generateGoogle(prompt: string, apiKey: string, modelId: string): Promise<string> {
+  private async generateGoogle(
+    prompt: string,
+    apiKey: string,
+    modelId: string,
+  ): Promise<string> {
     const ai = new GoogleGenerativeAI(apiKey);
     const model = ai.getGenerativeModel({ model: modelId });
     const result = await model.generateContent(prompt);
     return result.response.text() ?? '';
   }
 
-  private async generateAnthropic(prompt: string, apiKey: string, modelId: string): Promise<string> {
+  private async generateAnthropic(
+    prompt: string,
+    apiKey: string,
+    modelId: string,
+  ): Promise<string> {
     const client = new Anthropic({ apiKey });
     const message = await client.messages.create({
       model: modelId,
@@ -41,8 +58,31 @@ export class LlmService {
     return block?.type === 'text' ? block.text : '';
   }
 
-  private async generateOpenAI(prompt: string, apiKey: string, modelId: string): Promise<string> {
+  private async generateOpenAI(
+    prompt: string,
+    apiKey: string,
+    modelId: string,
+  ): Promise<string> {
     const client = new OpenAI({ apiKey });
+    const completion = await client.chat.completions.create({
+      model: modelId,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    return completion.choices[0]?.message.content ?? '';
+  }
+
+  private async generateOllama(
+    prompt: string,
+    baseUrl: string,
+    modelId: string,
+  ): Promise<string> {
+    const resolvedBase = baseUrl.trim() || OLLAMA_BASE_URL;
+    // 30-minute timeout: CPU inference on large prompts easily exceeds the SDK default 5 min
+    const client = new OpenAI({
+      baseURL: `${resolvedBase}/v1`,
+      apiKey: 'ollama',
+      timeout: 30 * 60 * 1000,
+    });
     const completion = await client.chat.completions.create({
       model: modelId,
       messages: [{ role: 'user', content: prompt }],
