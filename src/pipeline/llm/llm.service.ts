@@ -21,7 +21,7 @@ export class LlmService {
       case ApiProvider.openai:
         return await this.generateOpenAI(prompt, apiKey, modelId);
       case ApiProvider.ollama:
-        return await this.generateOllama(prompt, modelId);
+        return await this.generateOllama(prompt, apiKey, modelId);
       default:
         throw new Error(`Unsupported provider: ${String(provider)}`);
     }
@@ -54,9 +54,10 @@ export class LlmService {
     return completion.choices[0]?.message.content ?? '';
   }
 
-  private async generateOllama(prompt: string, modelId: string): Promise<string> {
+  private async generateOllama(prompt: string, baseUrl: string, modelId: string): Promise<string> {
+    const resolvedBase = baseUrl.trim() || OLLAMA_BASE_URL;
     const client = new OpenAI({
-      baseURL: `${OLLAMA_BASE_URL}/v1`,
+      baseURL: `${resolvedBase}/v1`,
       apiKey: 'ollama',
     });
     const completion = await client.chat.completions.create({

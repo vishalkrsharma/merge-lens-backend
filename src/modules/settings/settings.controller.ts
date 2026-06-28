@@ -123,4 +123,22 @@ export class SettingsController {
   ) {
     return this.settingsService.setPreferredModel(user.id, body.model);
   }
+
+  @Get('ollama-url')
+  @ApiOperation({ summary: "Get user's configured Ollama server URL" })
+  @ApiResponse({ status: 200, schema: { properties: { url: { type: 'string', nullable: true } } } })
+  getOllamaUrl(@CurrentUser() user: { id: string }) {
+    return this.settingsService.getOllamaUrl(user.id).then((url) => ({ url }));
+  }
+
+  @Put('ollama-url')
+  @HttpCode(204)
+  @ApiOperation({ summary: "Set user's Ollama server URL" })
+  @ApiResponse({ status: 204 })
+  setOllamaUrl(
+    @CurrentUser() user: { id: string },
+    @Body() body: { url: string | null },
+  ) {
+    return this.settingsService.setOllamaUrl(user.id, body.url);
+  }
 }

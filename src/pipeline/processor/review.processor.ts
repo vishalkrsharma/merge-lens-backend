@@ -147,7 +147,7 @@ export class ReviewProcessor implements OnModuleInit {
             this.apiKeysService.getDecrypted(repository.userId),
             this.prisma.user.findUnique({
               where: { id: repository.userId },
-              select: { preferredProvider: true, preferredModel: true },
+              select: { preferredProvider: true, preferredModel: true, ollamaBaseUrl: true },
             }),
           ])
         : [{}, null];
@@ -158,6 +158,7 @@ export class ReviewProcessor implements OnModuleInit {
         apiKeys,
         user?.preferredProvider,
         user?.preferredModel,
+        user?.ollamaBaseUrl,
       );
 
       // Apply severity threshold: filter findings before posting to GitHub and saving.

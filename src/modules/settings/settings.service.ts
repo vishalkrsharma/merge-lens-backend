@@ -103,4 +103,19 @@ export class SettingsService {
       data: { preferredModel: modelId ?? null },
     });
   }
+
+  async getOllamaUrl(userId: string): Promise<string | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { ollamaBaseUrl: true },
+    });
+    return user?.ollamaBaseUrl ?? null;
+  }
+
+  async setOllamaUrl(userId: string, url: string | null): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { ollamaBaseUrl: url ?? null },
+    });
+  }
 }

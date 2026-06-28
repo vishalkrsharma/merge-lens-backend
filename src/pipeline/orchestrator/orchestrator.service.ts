@@ -32,6 +32,7 @@ export class OrchestratorService {
     apiKeys: Partial<Record<ApiProvider, string>> = {},
     preferredProvider?: ApiProvider | null,
     preferredModel?: string | null,
+    ollamaBaseUrl?: string | null,
   ): Promise<OrchestratorResult> {
     const span = this.tracing.startSpan('orchestrator.execute');
 
@@ -39,7 +40,7 @@ export class OrchestratorService {
       ? (['bug', 'security', 'performance', 'style'] as AgentType[])
       : enabledAgents;
 
-    const { provider, apiKey, modelId } = this.resolveModel(apiKeys, preferredProvider, preferredModel);
+    const { provider, apiKey, modelId } = this.resolveModel(apiKeys, preferredProvider, preferredModel, ollamaBaseUrl);
 
     this.logger.log(`Starting review with agents: ${active.join(', ')} using provider: ${String(provider)}, model: ${modelId}`);
 
@@ -77,14 +78,17 @@ export class OrchestratorService {
     apiKeys: Partial<Record<ApiProvider, string>>,
     preferredProvider?: ApiProvider | null,
     preferredModel?: string | null,
+    ollamaBaseUrl?: string | null,
   ): { provider: ApiProvider; apiKey: string; modelId: string } {
+    const ollamaUrl = ollamaBaseUrl ?? '';
+
     // If a specific model is set, derive the provider from the catalog
     if (preferredModel) {
       const entry = findModel(preferredModel);
       if (entry) {
-        // Ollama runs locally — no API key needed
+        // For Ollama, apiKey carries the base URL (empty = use env/default)
         if (entry.provider === ApiProvider.ollama) {
-          return { provider: ApiProvider.ollama, apiKey: '', modelId: preferredModel };
+          return { provider: ApiProvider.ollama, apiKey: ollamaUrl, modelId: preferredModel };
         }
         const userKey = apiKeys[entry.provider];
         if (userKey) return { provider: entry.provider, apiKey: userKey, modelId: preferredModel };
@@ -94,7 +98,7 @@ export class OrchestratorService {
     // Fall back to provider preference (legacy)
     const target = preferredProvider ?? ApiProvider.google;
     if (target === ApiProvider.ollama) {
-      return { provider: ApiProvider.ollama, apiKey: '', modelId: defaultModelForProvider(ApiProvider.ollama) };
+      return { provider: ApiProvider.ollama, apiKey: ollamaUrl, modelId: defaultModelForProvider(ApiProvider.ollama) };
     }
     const userKey = apiKeys[target];
     if (userKey) {
