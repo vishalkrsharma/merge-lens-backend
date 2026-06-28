@@ -19,11 +19,15 @@ export abstract class BaseAgent {
       return { findings: [], summary: 'Agent failed to produce results' };
 
     try {
-      const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-      const jsonStr = jsonMatch ? jsonMatch[1] : raw;
-      return JSON.parse(jsonStr) as AgentResponse;
+      // Strip code fences, then fall back to extracting the first {...} block
+      const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      const jsonStr = fenced
+        ? fenced[1]
+        : (raw.match(/(\{[\s\S]*\})/)?.[1] ?? raw);
+      return JSON.parse(jsonStr.trim()) as AgentResponse;
     } catch (err) {
       this.logger.warn(`Agent failed to parse response: ${String(err)}`);
+      this.logger.debug(`Raw LLM response: ${raw.slice(0, 500)}`);
       return { findings: [], summary: 'Agent failed to produce results' };
     }
   }
