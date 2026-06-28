@@ -17,7 +17,10 @@ import { QueueService } from './queue.service';
           monitorStateIntervalSeconds: 120,
         });
         await boss.start();
-        await boss.createQueue(REVIEW_QUEUE, { name: REVIEW_QUEUE, retryLimit: 0 });
+        await boss.createQueue(REVIEW_QUEUE, {
+          name: REVIEW_QUEUE,
+          retryLimit: 0,
+        });
         return boss;
       },
     },

@@ -15,7 +15,8 @@ export abstract class BaseAgent {
     modelId: string,
   ): Promise<AgentResponse> {
     const raw = await this.llm.generate(prompt, provider, apiKey, modelId);
-    if (!raw) return { findings: [], summary: 'Agent failed to produce results' };
+    if (!raw)
+      return { findings: [], summary: 'Agent failed to produce results' };
 
     try {
       const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);

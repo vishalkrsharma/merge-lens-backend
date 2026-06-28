@@ -14,7 +14,12 @@ export class InstallationHandler {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  handle(event: string, payload: GithubInstallationPayload, signature: string, rawBody: string) {
+  handle(
+    event: string,
+    payload: GithubInstallationPayload,
+    signature: string,
+    rawBody: string,
+  ) {
     if (!verifySignature(rawBody, signature)) {
       this.logger.warn('Webhook signature verification failed');
       return { invalidSignature: true };
@@ -76,7 +81,11 @@ export class InstallationHandler {
         where: { id: account.userId },
         data: { hasGithubApp: true },
       });
-      await this.syncRepositories(account.userId, payload.installation.id, repos);
+      await this.syncRepositories(
+        account.userId,
+        payload.installation.id,
+        repos,
+      );
       this.logger.log(
         `GitHub App installed for user ${account.userId}, synced ${repos.length} repos`,
       );
@@ -117,7 +126,10 @@ export class InstallationHandler {
         data: { hasGithubApp: false },
       });
       await this.prisma.repository.deleteMany({
-        where: { userId: account.userId, installationId: payload.installation.id },
+        where: {
+          userId: account.userId,
+          installationId: payload.installation.id,
+        },
       });
       this.logger.log(`GitHub App uninstalled for user ${account.userId}`);
       return { deleted: true };
@@ -148,9 +160,7 @@ export class InstallationHandler {
     }
 
     await this.syncRepositories(account.userId, payload.installation.id, repos);
-    this.logger.log(
-      `Added ${repos.length} repos for user ${account.userId}`,
-    );
+    this.logger.log(`Added ${repos.length} repos for user ${account.userId}`);
     return { added: repos.length };
   }
 
@@ -184,9 +194,7 @@ export class InstallationHandler {
       },
     });
 
-    this.logger.log(
-      `Removed ${repos.length} repos for user ${account.userId}`,
-    );
+    this.logger.log(`Removed ${repos.length} repos for user ${account.userId}`);
     return { removed: repos.length };
   }
 

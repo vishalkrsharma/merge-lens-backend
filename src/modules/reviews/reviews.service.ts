@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '@/core/prisma/prisma.service';
 import { QueueService } from '@/core/queue/queue.service';
 import { ReviewStatus } from '@/generated/prisma/enums';
@@ -19,7 +23,14 @@ export class ReviewsService {
     private readonly queueService: QueueService,
   ) {}
 
-  async listReviews({ userId, q, repo, status, page = 1, limit = 20 }: ListReviewsOptions) {
+  async listReviews({
+    userId,
+    q,
+    repo,
+    status,
+    page = 1,
+    limit = 20,
+  }: ListReviewsOptions) {
     const where: Record<string, unknown> = { repository: { userId } };
 
     if (q) {
@@ -89,7 +100,11 @@ export class ReviewsService {
     await this.prisma.$transaction([
       this.prisma.review.update({
         where: { id },
-        data: { status: ReviewStatus.pending, durationMs: 0, completedAt: null },
+        data: {
+          status: ReviewStatus.pending,
+          durationMs: 0,
+          completedAt: null,
+        },
       }),
       this.prisma.finding.deleteMany({ where: { reviewId: id } }),
       this.prisma.reviewSummary.deleteMany({ where: { reviewId: id } }),

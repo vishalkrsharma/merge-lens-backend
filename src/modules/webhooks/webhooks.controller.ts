@@ -15,6 +15,10 @@ export class WebhooksController {
     @Headers() headers: Record<string, string>,
     @Req() req: Request & { rawBody?: string },
   ) {
-    return this.webhooksService.handleGithubWebhook(payload, headers, req.rawBody ?? '');
+    return this.webhooksService.handleGithubWebhook(
+      payload,
+      headers,
+      req.rawBody ?? '',
+    );
   }
 }

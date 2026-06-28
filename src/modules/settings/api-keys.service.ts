@@ -15,7 +15,11 @@ export class ApiKeysService {
     return this.config.getOrThrow<string>('BETTER_AUTH_SECRET');
   }
 
-  async upsert(userId: string, provider: ApiProvider, rawKey: string): Promise<void> {
+  async upsert(
+    userId: string,
+    provider: ApiProvider,
+    rawKey: string,
+  ): Promise<void> {
     const encrypted = encrypt(rawKey, this.secret);
     await this.prisma.userApiKey.upsert({
       where: { userId_provider: { userId, provider } },
@@ -36,7 +40,9 @@ export class ApiKeysService {
     return keys.map((k) => k.provider);
   }
 
-  async getDecrypted(userId: string): Promise<Partial<Record<ApiProvider, string>>> {
+  async getDecrypted(
+    userId: string,
+  ): Promise<Partial<Record<ApiProvider, string>>> {
     const keys = await this.prisma.userApiKey.findMany({ where: { userId } });
     return Object.fromEntries(
       keys.map((k) => [k.provider, decrypt(k.encrypted, this.secret)]),
