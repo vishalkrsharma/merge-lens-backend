@@ -82,7 +82,8 @@ export class OrchestratorService {
   ): { provider: ApiProvider; apiKey: string; modelId: string } {
     const ollamaUrl = ollamaBaseUrl ?? '';
 
-    // If a specific model is set, derive the provider from the catalog
+    // If a specific model is set, derive the provider from the catalog.
+    // Dynamic Ollama models (not in catalog) are identified by the ollama preferredProvider fallback.
     if (preferredModel) {
       const entry = findModel(preferredModel);
       if (entry) {
@@ -92,6 +93,9 @@ export class OrchestratorService {
         }
         const userKey = apiKeys[entry.provider];
         if (userKey) return { provider: entry.provider, apiKey: userKey, modelId: preferredModel };
+      } else if (preferredProvider === ApiProvider.ollama) {
+        // Dynamic model not in catalog but provider is ollama
+        return { provider: ApiProvider.ollama, apiKey: ollamaUrl, modelId: preferredModel };
       }
     }
 

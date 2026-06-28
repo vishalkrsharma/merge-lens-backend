@@ -94,13 +94,16 @@ export class SettingsService {
     return (m && findModel(m)) ? m : null;
   }
 
-  async setPreferredModel(userId: string, modelId: string | null): Promise<void> {
-    if (modelId !== null && !findModel(modelId)) {
-      throw new Error(`Unknown model: ${modelId}`);
-    }
+  async setPreferredModel(userId: string, modelId: string | null, provider?: ApiProvider | null): Promise<void> {
+    const catalogEntry = modelId ? findModel(modelId) : null;
+    const resolvedProvider = provider ?? catalogEntry?.provider ?? null;
     await this.prisma.user.update({
       where: { id: userId },
-      data: { preferredModel: modelId ?? null },
+      data: {
+        preferredModel: modelId ?? null,
+        // Keep preferredProvider in sync so the orchestrator knows which SDK to use
+        preferredProvider: resolvedProvider,
+      },
     });
   }
 
@@ -117,5 +120,18 @@ export class SettingsService {
       where: { id: userId },
       data: { ollamaBaseUrl: url ?? null },
     });
+  }
+
+  async getOllamaModels(userId: string): Promise<{ models: string[]; error?: string }> {
+    const url = await this.getOllamaUrl(userId);
+    const baseUrl = (url?.trim() || process.env.OLLAMA_BASE_URL || 'http://localhost:11434').replace(/\/$/, '');
+    try {
+      const res = await fetch(`${baseUrl}/api/tags`, { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) return { models: [], error: `Ollama returned ${res.status}` };
+      const data = await res.json() as { models: Array<{ name: string }> };
+      return { models: (data.models ?? []).map((m) => m.name) };
+    } catch {
+      return { models: [], error: `Cannot reach Ollama at ${baseUrl}` };
+    }
   }
 }

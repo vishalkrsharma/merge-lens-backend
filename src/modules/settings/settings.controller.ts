@@ -119,9 +119,9 @@ export class SettingsController {
   @ApiResponse({ status: 400, description: 'Unknown model ID' })
   setPreferredModel(
     @CurrentUser() user: { id: string },
-    @Body() body: { model: string | null },
+    @Body() body: { model: string | null; provider?: ApiProvider | null },
   ) {
-    return this.settingsService.setPreferredModel(user.id, body.model);
+    return this.settingsService.setPreferredModel(user.id, body.model, body.provider);
   }
 
   @Get('ollama-url')
@@ -140,5 +140,12 @@ export class SettingsController {
     @Body() body: { url: string | null },
   ) {
     return this.settingsService.setOllamaUrl(user.id, body.url);
+  }
+
+  @Get('ollama-models')
+  @ApiOperation({ summary: 'List models available on the configured Ollama server' })
+  @ApiResponse({ status: 200 })
+  getOllamaModels(@CurrentUser() user: { id: string }) {
+    return this.settingsService.getOllamaModels(user.id);
   }
 }
