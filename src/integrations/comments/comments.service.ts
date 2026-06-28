@@ -54,7 +54,9 @@ export class CommentsService {
       );
       this.logger.log('Updated comment to error state');
     } catch (err) {
-      this.logger.warn(`Failed to update comment to error state: ${String(err)}`);
+      this.logger.warn(
+        `Failed to update comment to error state: ${String(err)}`,
+      );
     }
   }
 
@@ -80,7 +82,9 @@ export class CommentsService {
         );
         this.logger.log('Updated start comment with review results');
       } catch (err) {
-        this.logger.warn(`Failed to edit start comment, posting new one: ${String(err)}`);
+        this.logger.warn(
+          `Failed to edit start comment, posting new one: ${String(err)}`,
+        );
         await this.githubService.postIssueComment(
           owner,
           repo,
@@ -103,8 +107,14 @@ export class CommentsService {
 
     const allFindings: Array<{ agent: string; finding: AgentFinding }> = [
       ...result.bug.findings.map((f) => ({ agent: 'bug', finding: f })),
-      ...result.security.findings.map((f) => ({ agent: 'security', finding: f })),
-      ...result.performance.findings.map((f) => ({ agent: 'performance', finding: f })),
+      ...result.security.findings.map((f) => ({
+        agent: 'security',
+        finding: f,
+      })),
+      ...result.performance.findings.map((f) => ({
+        agent: 'performance',
+        finding: f,
+      })),
       ...result.style.findings.map((f) => ({ agent: 'style', finding: f })),
     ];
 
@@ -121,7 +131,9 @@ export class CommentsService {
           installationId,
         );
       } catch {
-        this.logger.warn(`Skipped inline comment on ${finding.file}:${finding.line}`);
+        this.logger.warn(
+          `Skipped inline comment on ${finding.file}:${finding.line}`,
+        );
       }
     }
   }
@@ -193,7 +205,11 @@ export class CommentsService {
     }> = [
       { label: 'Bug Analysis', icon: '🐛', response: result.bug },
       { label: 'Security Analysis', icon: '🔒', response: result.security },
-      { label: 'Performance Analysis', icon: '⚡', response: result.performance },
+      {
+        label: 'Performance Analysis',
+        icon: '⚡',
+        response: result.performance,
+      },
       { label: 'Style Analysis', icon: '✨', response: result.style },
     ];
 
@@ -201,16 +217,26 @@ export class CommentsService {
       sections.push(`### ${icon} ${label}`);
       sections.push(response.summary);
       if (response.findings.length > 0) {
-        const high = response.findings.filter((f) => f.severity === 'high').length;
-        const med = response.findings.filter((f) => f.severity === 'medium').length;
-        const low = response.findings.filter((f) => f.severity === 'low').length;
-        sections.push(`\n_Findings: ${high} high · ${med} medium · ${low} low — see inline comments for details_`);
+        const high = response.findings.filter(
+          (f) => f.severity === 'high',
+        ).length;
+        const med = response.findings.filter(
+          (f) => f.severity === 'medium',
+        ).length;
+        const low = response.findings.filter(
+          (f) => f.severity === 'low',
+        ).length;
+        sections.push(
+          `\n_Findings: ${high} high · ${med} medium · ${low} low — see inline comments for details_`,
+        );
       }
       sections.push('');
     }
 
     sections.push('---');
-    sections.push('_Powered by [MergeLens](https://merge-lens.vercel.app) · multi-agent AI review_');
+    sections.push(
+      '_Powered by [MergeLens](https://merge-lens.vercel.app) · multi-agent AI review_',
+    );
     return sections.join('\n');
   }
 
@@ -222,8 +248,9 @@ export class CommentsService {
       style: '✨',
     };
     const severityBadge =
-      { high: '🔴 High', medium: '🟡 Medium', low: '🟢 Low' }[finding.severity] ??
-      finding.severity;
+      { high: '🔴 High', medium: '🟡 Medium', low: '🟢 Low' }[
+        finding.severity
+      ] ?? finding.severity;
     return `${icons[agent] ?? '📌'} **${severityBadge}** (${agent})\n\n${finding.issue}\n\n**Suggestion:** ${finding.suggestion}`;
   }
 }

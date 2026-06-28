@@ -19,19 +19,40 @@ export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List reviews with optional filters and pagination' })
-  @ApiQuery({ name: 'q', required: false, description: 'Substring match on PR title' })
-  @ApiQuery({ name: 'repo', required: false, description: 'Filter by owner/repo (omit or "all" for no filter)' })
+  @ApiOperation({
+    summary: 'List reviews with optional filters and pagination',
+  })
+  @ApiQuery({
+    name: 'q',
+    required: false,
+    description: 'Substring match on PR title',
+  })
+  @ApiQuery({
+    name: 'repo',
+    required: false,
+    description: 'Filter by owner/repo (omit or "all" for no filter)',
+  })
   @ApiQuery({
     name: 'status',
     required: false,
     enum: ['pending', 'running', 'completed', 'failed', 'all'],
   })
-  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
-  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 20 })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number (1-based)',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Items per page',
+    example: 20,
+  })
   @ApiResponse({
     status: 200,
-    description: 'Paginated list of reviews. Each item includes computed findingCounts.',
+    description:
+      'Paginated list of reviews. Each item includes computed findingCounts.',
     schema: {
       properties: {
         data: { type: 'array', items: { type: 'object' } },
@@ -59,14 +80,20 @@ export class ReviewsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a single review with its findings and summary' })
+  @ApiOperation({
+    summary: 'Get a single review with its findings and summary',
+  })
   @ApiParam({ name: 'id', description: 'Review ID' })
   @ApiResponse({
     status: 200,
-    description: 'Review detail including findings array and summary (null if not yet completed)',
+    description:
+      'Review detail including findings array and summary (null if not yet completed)',
   })
   @ApiResponse({ status: 401, description: 'Unauthenticated' })
-  @ApiResponse({ status: 404, description: 'Review not found or not owned by the user' })
+  @ApiResponse({
+    status: 404,
+    description: 'Review not found or not owned by the user',
+  })
   getReview(@Param('id') id: string, @CurrentUser() user: { id: string }) {
     return this.reviewsService.getReview(id, user.id);
   }

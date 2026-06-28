@@ -1,5 +1,10 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiCookieAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { StatsService } from './stats.service';
 import { AuthGuard } from '@/common/guards/auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
@@ -12,10 +17,13 @@ export class StatsController {
   constructor(private readonly statsService: StatsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get dashboard statistics for the authenticated user' })
+  @ApiOperation({
+    summary: 'Get dashboard statistics for the authenticated user',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Aggregated stats including review counts, findings by agent/severity, and time-series data',
+    description:
+      'Aggregated stats including review counts, findings by agent/severity, and time-series data',
     schema: {
       properties: {
         totalReviews: { type: 'number' },

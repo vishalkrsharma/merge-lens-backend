@@ -57,7 +57,10 @@ Return plain text only, no JSON, no markdown headers.`;
 
     try {
       const text = await this.llm.generate(prompt, provider, apiKey, modelId);
-      return text.trim() || `PR review complete. Found ${totalFindings} issues (${highFindings} high severity).`;
+      return (
+        text.trim() ||
+        `PR review complete. Found ${totalFindings} issues (${highFindings} high severity).`
+      );
     } catch (err) {
       this.logger.warn(`SummaryAgent failed: ${String(err)}`);
       return `PR review complete. Found ${totalFindings} issues (${highFindings} high severity).`;

@@ -1,4 +1,9 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+} from 'crypto';
 
 const ALGO = 'aes-256-gcm';
 
@@ -10,7 +15,10 @@ export function encrypt(plaintext: string, secret: string): string {
   const key = keyFromSecret(secret);
   const iv = randomBytes(12);
   const cipher = createCipheriv(ALGO, key, iv);
-  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const encrypted = Buffer.concat([
+    cipher.update(plaintext, 'utf8'),
+    cipher.final(),
+  ]);
   const tag = cipher.getAuthTag();
   return `${iv.toString('base64')}:${tag.toString('base64')}:${encrypted.toString('base64')}`;
 }
@@ -25,5 +33,7 @@ export function decrypt(ciphertext: string, secret: string): string {
   const enc = Buffer.from(encB64, 'base64');
   const decipher = createDecipheriv(ALGO, key, iv);
   decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8');
+  return Buffer.concat([decipher.update(enc), decipher.final()]).toString(
+    'utf8',
+  );
 }

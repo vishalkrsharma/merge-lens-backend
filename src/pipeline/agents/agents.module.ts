@@ -8,7 +8,19 @@ import { SummaryAgent } from './summary.agent';
 
 @Module({
   imports: [LlmModule],
-  providers: [BugAgent, SecurityAgent, PerformanceAgent, StyleAgent, SummaryAgent],
-  exports: [BugAgent, SecurityAgent, PerformanceAgent, StyleAgent, SummaryAgent],
+  providers: [
+    BugAgent,
+    SecurityAgent,
+    PerformanceAgent,
+    StyleAgent,
+    SummaryAgent,
+  ],
+  exports: [
+    BugAgent,
+    SecurityAgent,
+    PerformanceAgent,
+    StyleAgent,
+    SummaryAgent,
+  ],
 })
 export class AgentsModule {}

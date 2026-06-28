@@ -24,7 +24,10 @@ export class StatsService {
       }
     }
 
-    const totalFindings = findingsBySeverity.low + findingsBySeverity.medium + findingsBySeverity.high;
+    const totalFindings =
+      findingsBySeverity.low +
+      findingsBySeverity.medium +
+      findingsBySeverity.high;
 
     const completedReviews = reviews.filter((r) => r.status === 'completed');
     const avgDurationMs =

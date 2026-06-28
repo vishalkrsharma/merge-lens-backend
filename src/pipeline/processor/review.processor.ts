@@ -45,7 +45,15 @@ export class ReviewProcessor implements OnModuleInit {
   }
 
   async process(job: PgBoss.Job<ReviewJobData>): Promise<void> {
-    const { repo, owner, pullNumber, repositoryId, installationId, enabledAgents, severityThreshold } = job.data;
+    const {
+      repo,
+      owner,
+      pullNumber,
+      repositoryId,
+      installationId,
+      enabledAgents,
+      severityThreshold,
+    } = job.data;
     const reviewStart = Date.now();
     const span = this.tracing.startSpan('review.process');
     const reviewId = job.data.reviewId ?? randomUUID();
@@ -64,9 +72,19 @@ export class ReviewProcessor implements OnModuleInit {
       this.appLogger.fetchingPR(owner, repo, pullNumber);
 
       const [prDetails, commitId, files] = await Promise.all([
-        this.githubService.getPRDetails(owner, repo, pullNumber, installationId),
+        this.githubService.getPRDetails(
+          owner,
+          repo,
+          pullNumber,
+          installationId,
+        ),
         this.githubService.getHeadSha(owner, repo, pullNumber, installationId),
-        this.githubService.getChangedFiles(owner, repo, pullNumber, installationId),
+        this.githubService.getChangedFiles(
+          owner,
+          repo,
+          pullNumber,
+          installationId,
+        ),
       ]);
 
       if (job.data.reviewId) {
@@ -147,7 +165,11 @@ export class ReviewProcessor implements OnModuleInit {
             this.apiKeysService.getDecrypted(repository.userId),
             this.prisma.user.findUnique({
               where: { id: repository.userId },
-              select: { preferredProvider: true, preferredModel: true, ollamaBaseUrl: true },
+              select: {
+                preferredProvider: true,
+                preferredModel: true,
+                ollamaBaseUrl: true,
+              },
             }),
           ])
         : [{}, null];
@@ -164,10 +186,30 @@ export class ReviewProcessor implements OnModuleInit {
       // Apply severity threshold: filter findings before posting to GitHub and saving.
       const filtered = {
         ...result,
-        bug:         { ...result.bug,         findings: result.bug.findings.filter(f         => meetsThreshold(f.severity, severityThreshold)) },
-        security:    { ...result.security,    findings: result.security.findings.filter(f    => meetsThreshold(f.severity, severityThreshold)) },
-        performance: { ...result.performance, findings: result.performance.findings.filter(f => meetsThreshold(f.severity, severityThreshold)) },
-        style:       { ...result.style,       findings: result.style.findings.filter(f       => meetsThreshold(f.severity, severityThreshold)) },
+        bug: {
+          ...result.bug,
+          findings: result.bug.findings.filter((f) =>
+            meetsThreshold(f.severity, severityThreshold),
+          ),
+        },
+        security: {
+          ...result.security,
+          findings: result.security.findings.filter((f) =>
+            meetsThreshold(f.severity, severityThreshold),
+          ),
+        },
+        performance: {
+          ...result.performance,
+          findings: result.performance.findings.filter((f) =>
+            meetsThreshold(f.severity, severityThreshold),
+          ),
+        },
+        style: {
+          ...result.style,
+          findings: result.style.findings.filter((f) =>
+            meetsThreshold(f.severity, severityThreshold),
+          ),
+        },
       };
 
       this.appLogger.postingComments(owner, repo, pullNumber);
