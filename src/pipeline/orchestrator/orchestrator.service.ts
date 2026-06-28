@@ -5,10 +5,18 @@ import { SecurityAgent } from '@/pipeline/agents/security.agent';
 import { PerformanceAgent } from '@/pipeline/agents/performance.agent';
 import { StyleAgent } from '@/pipeline/agents/style.agent';
 import { SummaryAgent } from '@/pipeline/agents/summary.agent';
-import { AgentResponse, OrchestratorResult, ReviewContext } from '@/pipeline/agents/types';
+import {
+  AgentResponse,
+  OrchestratorResult,
+  ReviewContext,
+} from '@/pipeline/agents/types';
 import { MetricsService } from '@/core/observability/metrics.service';
 import { TracingService } from '@/core/observability/tracing.service';
-import { DEFAULT_MODEL_ID, defaultModelForProvider, findModel } from '@/pipeline/llm/model-catalog';
+import {
+  DEFAULT_MODEL_ID,
+  defaultModelForProvider,
+  findModel,
+} from '@/pipeline/llm/model-catalog';
 
 const DISABLED_AGENT: AgentResponse = { findings: [], summary: '' };
 
@@ -36,25 +44,65 @@ export class OrchestratorService {
   ): Promise<OrchestratorResult> {
     const span = this.tracing.startSpan('orchestrator.execute');
 
-    const active = enabledAgents.length === 0
-      ? (['bug', 'security', 'performance', 'style'] as AgentType[])
-      : enabledAgents;
+    const active =
+      enabledAgents.length === 0
+        ? (['bug', 'security', 'performance', 'style'] as AgentType[])
+        : enabledAgents;
 
-    const { provider, apiKey, modelId } = this.resolveModel(apiKeys, preferredProvider, preferredModel, ollamaBaseUrl);
+    const { provider, apiKey, modelId } = this.resolveModel(
+      apiKeys,
+      preferredProvider,
+      preferredModel,
+      ollamaBaseUrl,
+    );
 
-    this.logger.log(`Starting review with agents: ${active.join(', ')} using provider: ${String(provider)}, model: ${modelId}`);
+    this.logger.log(
+      `Starting review with agents: ${active.join(', ')} using provider: ${String(provider)}, model: ${modelId}`,
+    );
 
     const agentStart = Date.now();
 
     const run = (name: AgentType, fn: () => Promise<AgentResponse>) =>
-      active.includes(name) ? this.runAgent(name, fn) : Promise.resolve(DISABLED_AGENT);
+      active.includes(name)
+        ? this.runAgent(name, fn)
+        : Promise.resolve(DISABLED_AGENT);
 
-    const [bug, security, performance, style] = await Promise.all([
-      run('bug', () => this.bugAgent.review(context, provider, apiKey, modelId)),
-      run('security', () => this.securityAgent.review(context, provider, apiKey, modelId)),
-      run('performance', () => this.performanceAgent.review(context, provider, apiKey, modelId)),
-      run('style', () => this.styleAgent.review(context, provider, apiKey, modelId)),
-    ]);
+    // Ollama has a single inference slot — run sequentially so requests don't
+    // queue up and all die together when one hits the SDK timeout.
+    let bug: AgentResponse;
+    let security: AgentResponse;
+    let performance: AgentResponse;
+    let style: AgentResponse;
+
+    if (provider === ApiProvider.ollama) {
+      bug = await run('bug', () =>
+        this.bugAgent.review(context, provider, apiKey, modelId),
+      );
+      security = await run('security', () =>
+        this.securityAgent.review(context, provider, apiKey, modelId),
+      );
+      performance = await run('performance', () =>
+        this.performanceAgent.review(context, provider, apiKey, modelId),
+      );
+      style = await run('style', () =>
+        this.styleAgent.review(context, provider, apiKey, modelId),
+      );
+    } else {
+      [bug, security, performance, style] = await Promise.all([
+        run('bug', () =>
+          this.bugAgent.review(context, provider, apiKey, modelId),
+        ),
+        run('security', () =>
+          this.securityAgent.review(context, provider, apiKey, modelId),
+        ),
+        run('performance', () =>
+          this.performanceAgent.review(context, provider, apiKey, modelId),
+        ),
+        run('style', () =>
+          this.styleAgent.review(context, provider, apiKey, modelId),
+        ),
+      ]);
+    }
 
     const agentDuration = Date.now() - agentStart;
     this.logger.log(`All agents completed in ${agentDuration}ms`);
@@ -68,7 +116,10 @@ export class OrchestratorService {
       apiKey,
       modelId,
     );
-    this.metrics.recordAgentDuration('summary_agent', Date.now() - summaryStart);
+    this.metrics.recordAgentDuration(
+      'summary_agent',
+      Date.now() - summaryStart,
+    );
 
     span.end();
     return { bug, security, performance, style, overallSummary };
@@ -89,24 +140,45 @@ export class OrchestratorService {
       if (entry) {
         // For Ollama, apiKey carries the base URL (empty = use env/default)
         if (entry.provider === ApiProvider.ollama) {
-          return { provider: ApiProvider.ollama, apiKey: ollamaUrl, modelId: preferredModel };
+          return {
+            provider: ApiProvider.ollama,
+            apiKey: ollamaUrl,
+            modelId: preferredModel,
+          };
         }
         const userKey = apiKeys[entry.provider];
-        if (userKey) return { provider: entry.provider, apiKey: userKey, modelId: preferredModel };
+        if (userKey)
+          return {
+            provider: entry.provider,
+            apiKey: userKey,
+            modelId: preferredModel,
+          };
       } else if (preferredProvider === ApiProvider.ollama) {
         // Dynamic model not in catalog but provider is ollama
-        return { provider: ApiProvider.ollama, apiKey: ollamaUrl, modelId: preferredModel };
+        return {
+          provider: ApiProvider.ollama,
+          apiKey: ollamaUrl,
+          modelId: preferredModel,
+        };
       }
     }
 
     // Fall back to provider preference (legacy)
     const target = preferredProvider ?? ApiProvider.google;
     if (target === ApiProvider.ollama) {
-      return { provider: ApiProvider.ollama, apiKey: ollamaUrl, modelId: defaultModelForProvider(ApiProvider.ollama) };
+      return {
+        provider: ApiProvider.ollama,
+        apiKey: ollamaUrl,
+        modelId: defaultModelForProvider(ApiProvider.ollama),
+      };
     }
     const userKey = apiKeys[target];
     if (userKey) {
-      return { provider: target, apiKey: userKey, modelId: defaultModelForProvider(target) };
+      return {
+        provider: target,
+        apiKey: userKey,
+        modelId: defaultModelForProvider(target),
+      };
     }
 
     throw new Error(
