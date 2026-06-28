@@ -14,6 +14,7 @@ import { REVIEW_QUEUE, ReviewJobData } from '@/core/queue/queue.constants';
 import { RetrievalService } from '@/pipeline/rag/retrieval.service';
 import { AgentType, Severity } from '@/generated/prisma/enums';
 import { ApiKeysService } from '@/modules/settings/api-keys.service';
+import { RealtimeService } from '@/core/realtime/realtime.service';
 
 const AGENT_TYPES: AgentType[] = ['bug', 'security', 'performance', 'style'];
 
@@ -36,6 +37,7 @@ export class ReviewProcessor implements OnModuleInit {
     private readonly metrics: MetricsService,
     private readonly tracing: TracingService,
     private readonly apiKeysService: ApiKeysService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   async onModuleInit() {
@@ -67,6 +69,8 @@ export class ReviewProcessor implements OnModuleInit {
       pullNumber,
       installationId,
     );
+
+    let repository: { userId: string } | null = null;
 
     try {
       this.appLogger.fetchingPR(owner, repo, pullNumber);
@@ -156,10 +160,20 @@ export class ReviewProcessor implements OnModuleInit {
         docs,
       };
 
-      const repository = await this.prisma.repository.findUnique({
+      repository = await this.prisma.repository.findUnique({
         where: { id: repositoryId },
         select: { userId: true },
       });
+
+      if (repository) {
+        this.realtime.emitToUser(repository.userId, 'review:started', {
+          reviewId,
+          owner,
+          repo,
+          pullNumber,
+        });
+      }
+
       const [apiKeys, user] = repository
         ? await Promise.all([
             this.apiKeysService.getDecrypted(repository.userId),
@@ -264,6 +278,18 @@ export class ReviewProcessor implements OnModuleInit {
       this.appLogger.reviewComplete(owner, repo, pullNumber, duration);
       this.metrics.recordReviewDuration(duration);
 
+      if (repository) {
+        const findingsCount = AGENT_TYPES.reduce(
+          (n, a) => n + filtered[a].findings.length,
+          0,
+        );
+        this.realtime.emitToUser(repository.userId, 'review:completed', {
+          reviewId,
+          findingsCount,
+          durationMs: duration,
+        });
+      }
+
       for (const agent of AGENT_TYPES) {
         for (const finding of result[agent].findings) {
           this.metrics.recordFindings(agent, finding.severity, 1);
@@ -288,6 +314,12 @@ export class ReviewProcessor implements OnModuleInit {
           data: { status: 'failed', durationMs: Date.now() - reviewStart },
         })
         .catch(() => {});
+
+      if (repository) {
+        this.realtime.emitToUser(repository.userId, 'review:failed', {
+          reviewId,
+        });
+      }
 
       throw err;
     } finally {
