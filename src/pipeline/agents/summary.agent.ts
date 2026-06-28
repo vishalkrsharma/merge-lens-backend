@@ -19,6 +19,7 @@ export class SummaryAgent {
     },
     provider: ApiProvider,
     apiKey: string,
+    modelId: string,
   ): Promise<string> {
     const totalFindings =
       results.bug.findings.length +
@@ -55,7 +56,7 @@ Write a concise 3-4 sentence overall PR review summary covering:
 Return plain text only, no JSON, no markdown headers.`;
 
     try {
-      const text = await this.llm.generate(prompt, provider, apiKey);
+      const text = await this.llm.generate(prompt, provider, apiKey, modelId);
       return text.trim() || `PR review complete. Found ${totalFindings} issues (${highFindings} high severity).`;
     } catch (err) {
       this.logger.warn(`SummaryAgent failed: ${String(err)}`);

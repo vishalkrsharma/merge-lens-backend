@@ -12,8 +12,9 @@ export abstract class BaseAgent {
     prompt: string,
     provider: ApiProvider,
     apiKey: string,
+    modelId: string,
   ): Promise<AgentResponse> {
-    const raw = await this.llm.generate(prompt, provider, apiKey);
+    const raw = await this.llm.generate(prompt, provider, apiKey, modelId);
     if (!raw) return { findings: [], summary: 'Agent failed to produce results' };
 
     try {
