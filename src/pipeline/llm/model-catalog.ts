@@ -27,6 +27,13 @@ export const MODEL_CATALOG: ModelEntry[] = [
   { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: ApiProvider.openai, description: 'Fast & affordable' },
   { id: 'o3-mini',     name: 'o3 Mini',     provider: ApiProvider.openai, description: 'Reasoning model' },
   { id: 'o1-mini',     name: 'o1 Mini',     provider: ApiProvider.openai, description: 'Reasoning model' },
+  // Ollama (local — no API key required)
+  { id: 'llama3.2',   name: 'Llama 3.2 3B',  provider: ApiProvider.ollama, description: 'Fast, runs locally via Ollama' },
+  { id: 'llama3.1',   name: 'Llama 3.1 8B',  provider: ApiProvider.ollama, description: 'Balanced local model' },
+  { id: 'qwen2.5',    name: 'Qwen 2.5 7B',   provider: ApiProvider.ollama, description: 'Strong multilingual model' },
+  { id: 'mistral',    name: 'Mistral 7B',     provider: ApiProvider.ollama, description: 'Efficient and capable' },
+  { id: 'phi4',       name: 'Phi-4 14B',      provider: ApiProvider.ollama, description: 'Microsoft reasoning model' },
+  { id: 'gemma3:4b',  name: 'Gemma 3 4B',     provider: ApiProvider.ollama, description: 'Google compact local model' },
 ];
 
 export const findModel = (id: string): ModelEntry | undefined =>

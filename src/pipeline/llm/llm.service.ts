@@ -4,6 +4,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { ApiProvider } from '@/generated/prisma/enums';
 
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
+
 @Injectable()
 export class LlmService {
   private readonly logger = new Logger(LlmService.name);
@@ -18,6 +20,8 @@ export class LlmService {
         return await this.generateAnthropic(prompt, apiKey, modelId);
       case ApiProvider.openai:
         return await this.generateOpenAI(prompt, apiKey, modelId);
+      case ApiProvider.ollama:
+        return await this.generateOllama(prompt, modelId);
       default:
         throw new Error(`Unsupported provider: ${String(provider)}`);
     }
@@ -43,6 +47,18 @@ export class LlmService {
 
   private async generateOpenAI(prompt: string, apiKey: string, modelId: string): Promise<string> {
     const client = new OpenAI({ apiKey });
+    const completion = await client.chat.completions.create({
+      model: modelId,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    return completion.choices[0]?.message.content ?? '';
+  }
+
+  private async generateOllama(prompt: string, modelId: string): Promise<string> {
+    const client = new OpenAI({
+      baseURL: `${OLLAMA_BASE_URL}/v1`,
+      apiKey: 'ollama',
+    });
     const completion = await client.chat.completions.create({
       model: modelId,
       messages: [{ role: 'user', content: prompt }],

@@ -82,6 +82,10 @@ export class OrchestratorService {
     if (preferredModel) {
       const entry = findModel(preferredModel);
       if (entry) {
+        // Ollama runs locally — no API key needed
+        if (entry.provider === ApiProvider.ollama) {
+          return { provider: ApiProvider.ollama, apiKey: '', modelId: preferredModel };
+        }
         const userKey = apiKeys[entry.provider];
         if (userKey) return { provider: entry.provider, apiKey: userKey, modelId: preferredModel };
       }
@@ -89,6 +93,9 @@ export class OrchestratorService {
 
     // Fall back to provider preference (legacy)
     const target = preferredProvider ?? ApiProvider.google;
+    if (target === ApiProvider.ollama) {
+      return { provider: ApiProvider.ollama, apiKey: '', modelId: defaultModelForProvider(ApiProvider.ollama) };
+    }
     const userKey = apiKeys[target];
     if (userKey) {
       return { provider: target, apiKey: userKey, modelId: defaultModelForProvider(target) };
