@@ -7,6 +7,7 @@ import { OrchestratorModule } from '@/pipeline/orchestrator/orchestrator.module'
 import { QueueModule } from '@/core/queue/queue.module';
 import { RagModule } from '@/pipeline/rag/rag.module';
 import { SettingsModule } from '@/modules/settings/settings.module';
+import { RealtimeModule } from '@/core/realtime/realtime.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { SettingsModule } from '@/modules/settings/settings.module';
     RagModule,
     ObservabilityModule,
     SettingsModule,
+    RealtimeModule,
   ],
   providers: [ReviewProcessor],
 })

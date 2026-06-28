@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { verifySignature } from '@/integrations/github/verify-signature';
 import { PrismaService } from '@/core/prisma/prisma.service';
+import { RealtimeService } from '@/core/realtime/realtime.service';
 import {
   GithubInstallationPayload,
   GithubInstallationRepositoriesPayload,
@@ -12,7 +13,10 @@ type RepoEntry = { name: string; full_name: string };
 export class InstallationHandler {
   private readonly logger = new Logger(InstallationHandler.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   handle(
     event: string,
@@ -86,6 +90,7 @@ export class InstallationHandler {
         payload.installation.id,
         repos,
       );
+      this.realtime.emitToUser(account.userId, 'github-app:installed', {});
       this.logger.log(
         `GitHub App installed for user ${account.userId}, synced ${repos.length} repos`,
       );

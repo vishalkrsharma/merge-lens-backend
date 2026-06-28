@@ -20,6 +20,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { StatsModule } from './modules/stats/stats.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { RealtimeModule } from './core/realtime/realtime.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     }),
     PrismaModule,
     AuthModule.forRoot({ auth }),
+    RealtimeModule,
     ObservabilityModule,
     QueueModule,
     GithubModule,
