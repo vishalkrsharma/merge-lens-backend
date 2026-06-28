@@ -239,18 +239,28 @@ export class ReviewProcessor implements OnModuleInit {
 
       const duration = Date.now() - reviewStart;
 
+      const VALID_SEVERITIES = new Set<string>(['low', 'medium', 'high']);
       await this.prisma.finding.createMany({
         data: AGENT_TYPES.flatMap((agent) =>
-          filtered[agent].findings.map((f) => ({
-            id: randomUUID(),
-            agent,
-            file: f.file,
-            line: f.line,
-            severity: f.severity,
-            issue: f.issue,
-            suggestion: f.suggestion,
-            reviewId,
-          })),
+          filtered[agent].findings
+            .filter(
+              (f) =>
+                typeof f.line === 'number' &&
+                Number.isFinite(f.line) &&
+                VALID_SEVERITIES.has(f.severity) &&
+                f.issue &&
+                f.suggestion,
+            )
+            .map((f) => ({
+              id: randomUUID(),
+              agent,
+              file: f.file,
+              line: f.line,
+              severity: f.severity,
+              issue: f.issue,
+              suggestion: f.suggestion,
+              reviewId,
+            })),
         ),
       });
 

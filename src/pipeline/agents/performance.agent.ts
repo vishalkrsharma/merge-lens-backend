@@ -34,13 +34,23 @@ PR Description: ${context.description}
 Diff:
 ${context.diff}
 
-Return ONLY valid JSON (no explanation, no markdown):
+Return ONLY valid JSON. No explanation, no markdown, no code fences.
+
+STRICT RULES — violating any of these makes the response unusable:
+- "file": file path only, e.g. "src/foo.ts" — never include line ranges like "src/foo.ts:10-20"
+- "line": a single positive integer that exists in the diff above — never null, never undefined, never a range string
+- "severity": must be exactly one of the three strings: "low", "medium", "high" — never "medium-high" or any other value
+- "issue": a non-empty string describing the performance issue
+- "suggestion": a non-empty string explaining how to optimize it
+- If you cannot determine a valid integer line number for a finding, omit that finding entirely
+- All six fields are required on every finding — never omit or set to null/undefined
+
 {
   "findings": [
     {
-      "file": "filename",
-      "line": <integer>,
-      "severity": "low" | "medium" | "high",
+      "file": "src/example.ts",
+      "line": 42,
+      "severity": "medium",
       "issue": "description of the performance issue",
       "suggestion": "how to optimize it"
     }
