@@ -1,10 +1,29 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Put, UseGuards } from '@nestjs/common';
-import { ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiCookieAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ApiProvider } from '@/generated/prisma/enums';
 import { AuthGuard } from '@/common/guards/auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { ApiKeysService } from './api-keys.service';
-import { REVIEW_PROVIDERS, ReviewProvider, SettingsService } from './settings.service';
+import {
+  REVIEW_PROVIDERS,
+  ReviewProvider,
+  SettingsService,
+} from './settings.service';
 
 @ApiTags('Settings')
 @ApiCookieAuth()
@@ -17,7 +36,9 @@ export class SettingsController {
   ) {}
 
   @Get('usage')
-  @ApiOperation({ summary: 'Current-month review usage and per-provider API cost breakdown' })
+  @ApiOperation({
+    summary: 'Current-month review usage and per-provider API cost breakdown',
+  })
   @ApiResponse({
     status: 200,
     schema: {
@@ -29,7 +50,10 @@ export class SettingsController {
           items: {
             type: 'object',
             properties: {
-              provider: { type: 'string', enum: ['anthropic', 'google', 'openai', 'voyage'] },
+              provider: {
+                type: 'string',
+                enum: ['anthropic', 'google', 'openai', 'voyage'],
+              },
               calls: { type: 'number' },
               inputTokens: { type: 'number' },
               outputTokens: { type: 'number' },
@@ -46,8 +70,13 @@ export class SettingsController {
   }
 
   @Get('api-keys')
-  @ApiOperation({ summary: 'List providers for which the user has a saved API key' })
-  @ApiResponse({ status: 200, schema: { type: 'array', items: { type: 'string' } } })
+  @ApiOperation({
+    summary: 'List providers for which the user has a saved API key',
+  })
+  @ApiResponse({
+    status: 200,
+    schema: { type: 'array', items: { type: 'string' } },
+  })
   listApiKeys(@CurrentUser() user: { id: string }) {
     return this.apiKeysService.listProviders(user.id);
   }
@@ -79,9 +108,14 @@ export class SettingsController {
 
   @Get('preferred-provider')
   @ApiOperation({ summary: "Get user's preferred review AI provider" })
-  @ApiResponse({ status: 200, schema: { properties: { provider: { type: 'string', nullable: true } } } })
+  @ApiResponse({
+    status: 200,
+    schema: { properties: { provider: { type: 'string', nullable: true } } },
+  })
   getPreferredProvider(@CurrentUser() user: { id: string }) {
-    return this.settingsService.getPreferredProvider(user.id).then((provider) => ({ provider }));
+    return this.settingsService
+      .getPreferredProvider(user.id)
+      .then((provider) => ({ provider }));
   }
 
   @Put('preferred-provider')
@@ -93,7 +127,9 @@ export class SettingsController {
     @CurrentUser() user: { id: string },
     @Body() body: { provider: ReviewProvider | null },
   ) {
-    const valid = body.provider === null || (REVIEW_PROVIDERS as readonly string[]).includes(body.provider);
+    const valid =
+      body.provider === null ||
+      (REVIEW_PROVIDERS as readonly string[]).includes(body.provider);
     if (!valid) throw new Error(`Invalid provider: ${String(body.provider)}`);
     return this.settingsService.setPreferredProvider(user.id, body.provider);
   }
@@ -106,10 +142,18 @@ export class SettingsController {
   }
 
   @Get('preferred-model')
-  @ApiOperation({ summary: "Get user's preferred AI model" })
-  @ApiResponse({ status: 200, schema: { properties: { model: { type: 'string', nullable: true } } } })
+  @ApiOperation({ summary: "Get user's preferred AI model and provider" })
+  @ApiResponse({
+    status: 200,
+    schema: {
+      properties: {
+        model: { type: 'string', nullable: true },
+        provider: { type: 'string', nullable: true },
+      },
+    },
+  })
   getPreferredModel(@CurrentUser() user: { id: string }) {
-    return this.settingsService.getPreferredModel(user.id).then((model) => ({ model }));
+    return this.settingsService.getPreferredModel(user.id);
   }
 
   @Put('preferred-model')
@@ -121,12 +165,19 @@ export class SettingsController {
     @CurrentUser() user: { id: string },
     @Body() body: { model: string | null; provider?: ApiProvider | null },
   ) {
-    return this.settingsService.setPreferredModel(user.id, body.model, body.provider);
+    return this.settingsService.setPreferredModel(
+      user.id,
+      body.model,
+      body.provider,
+    );
   }
 
   @Get('ollama-url')
   @ApiOperation({ summary: "Get user's configured Ollama server URL" })
-  @ApiResponse({ status: 200, schema: { properties: { url: { type: 'string', nullable: true } } } })
+  @ApiResponse({
+    status: 200,
+    schema: { properties: { url: { type: 'string', nullable: true } } },
+  })
   getOllamaUrl(@CurrentUser() user: { id: string }) {
     return this.settingsService.getOllamaUrl(user.id).then((url) => ({ url }));
   }
@@ -143,9 +194,14 @@ export class SettingsController {
   }
 
   @Get('ollama-models')
-  @ApiOperation({ summary: 'List models available on the configured Ollama server' })
+  @ApiOperation({
+    summary: 'List models available on the configured Ollama server',
+  })
   @ApiResponse({ status: 200 })
-  getOllamaModels(@CurrentUser() user: { id: string }) {
-    return this.settingsService.getOllamaModels(user.id);
+  getOllamaModels(
+    @CurrentUser() user: { id: string },
+    @Query('url') url?: string,
+  ) {
+    return this.settingsService.getOllamaModels(user.id, url);
   }
 }

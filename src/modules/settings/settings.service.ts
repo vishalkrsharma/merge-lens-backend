@@ -1,10 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { ApiProvider } from '@/generated/prisma/enums';
 import { PrismaService } from '@/core/prisma/prisma.service';
-import { MODEL_CATALOG, ModelEntry, findModel } from '@/pipeline/llm/model-catalog';
+import {
+  MODEL_CATALOG,
+  ModelEntry,
+  findModel,
+} from '@/pipeline/llm/model-catalog';
 
-export type ReviewProvider = typeof REVIEW_PROVIDERS[number];
-export const REVIEW_PROVIDERS = [ApiProvider.google, ApiProvider.anthropic, ApiProvider.openai] as const;
+export type ReviewProvider = (typeof REVIEW_PROVIDERS)[number];
+export const REVIEW_PROVIDERS = [
+  ApiProvider.google,
+  ApiProvider.anthropic,
+  ApiProvider.openai,
+] as const;
 
 const MONTHLY_LIMIT = 50;
 
@@ -40,7 +48,12 @@ export class SettingsService {
 
     const providerMap = new Map<
       string,
-      { calls: number; inputTokens: number; outputTokens: number; costCents: number }
+      {
+        calls: number;
+        inputTokens: number;
+        outputTokens: number;
+        costCents: number;
+      }
     >();
 
     for (const log of apiLogs) {
@@ -57,10 +70,12 @@ export class SettingsService {
       providerMap.set(log.provider, existing);
     }
 
-    const apiUsage = Array.from(providerMap.entries()).map(([provider, stats]) => ({
-      provider,
-      ...stats,
-    }));
+    const apiUsage = Array.from(providerMap.entries()).map(
+      ([provider, stats]) => ({
+        provider,
+        ...stats,
+      }),
+    );
 
     return { thisMonthReviews, monthlyLimit: MONTHLY_LIMIT, apiUsage };
   }
@@ -71,10 +86,15 @@ export class SettingsService {
       select: { preferredProvider: true },
     });
     const p = user?.preferredProvider;
-    return (p && (REVIEW_PROVIDERS as readonly ApiProvider[]).includes(p) ? p : null) as ReviewProvider | null;
+    return (
+      p && (REVIEW_PROVIDERS as readonly ApiProvider[]).includes(p) ? p : null
+    ) as ReviewProvider | null;
   }
 
-  async setPreferredProvider(userId: string, provider: ReviewProvider | null): Promise<void> {
+  async setPreferredProvider(
+    userId: string,
+    provider: ReviewProvider | null,
+  ): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },
       data: { preferredProvider: provider ?? null },
@@ -85,16 +105,24 @@ export class SettingsService {
     return MODEL_CATALOG;
   }
 
-  async getPreferredModel(userId: string): Promise<string | null> {
+  async getPreferredModel(
+    userId: string,
+  ): Promise<{ model: string | null; provider: string | null }> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { preferredModel: true },
+      select: { preferredModel: true, preferredProvider: true },
     });
-    const m = user?.preferredModel;
-    return (m && findModel(m)) ? m : null;
+    return {
+      model: user?.preferredModel ?? null,
+      provider: user?.preferredProvider ?? null,
+    };
   }
 
-  async setPreferredModel(userId: string, modelId: string | null, provider?: ApiProvider | null): Promise<void> {
+  async setPreferredModel(
+    userId: string,
+    modelId: string | null,
+    provider?: ApiProvider | null,
+  ): Promise<void> {
     const catalogEntry = modelId ? findModel(modelId) : null;
     const resolvedProvider = provider ?? catalogEntry?.provider ?? null;
     await this.prisma.user.update({
@@ -122,13 +150,23 @@ export class SettingsService {
     });
   }
 
-  async getOllamaModels(userId: string): Promise<{ models: string[]; error?: string }> {
-    const url = await this.getOllamaUrl(userId);
-    const baseUrl = (url?.trim() || process.env.OLLAMA_BASE_URL || 'http://localhost:11434').replace(/\/$/, '');
+  async getOllamaModels(
+    userId: string,
+    urlOverride?: string,
+  ): Promise<{ models: string[]; error?: string }> {
+    const saved = urlOverride ?? (await this.getOllamaUrl(userId));
+    const baseUrl = (
+      saved?.trim() ||
+      process.env.OLLAMA_BASE_URL ||
+      'http://localhost:11434'
+    ).replace(/\/$/, '');
     try {
-      const res = await fetch(`${baseUrl}/api/tags`, { signal: AbortSignal.timeout(5000) });
-      if (!res.ok) return { models: [], error: `Ollama returned ${res.status}` };
-      const data = await res.json() as { models: Array<{ name: string }> };
+      const res = await fetch(`${baseUrl}/api/tags`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok)
+        return { models: [], error: `Ollama returned ${res.status}` };
+      const data = (await res.json()) as { models: Array<{ name: string }> };
       return { models: (data.models ?? []).map((m) => m.name) };
     } catch {
       return { models: [], error: `Cannot reach Ollama at ${baseUrl}` };
