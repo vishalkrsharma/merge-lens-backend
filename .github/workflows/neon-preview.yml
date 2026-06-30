@@ -42,8 +42,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Apply schema to preview branch
-        run: pnpm exec prisma db push --accept-data-loss
+      - name: Apply migrations to preview branch
+        run: pnpm migrate:deploy
         env:
           DATABASE_URL: ${{ steps.neon.outputs.db_url }}
 
@@ -57,7 +57,7 @@ jobs:
               `**Branch:** \`preview/${{ github.head_ref }}\``,
               `**Branch ID:** \`${{ steps.neon.outputs.branch_id }}\``,
               '',
-              'Schema has been synced with `prisma db push`.',
+              'Migrations applied with `prisma migrate deploy`.',
               '',
               'Set this in your local `.env.local` to develop against this branch:',
               '```',
