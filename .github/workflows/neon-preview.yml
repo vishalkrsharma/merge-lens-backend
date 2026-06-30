@@ -10,6 +10,9 @@ jobs:
   setup-branch:
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
     outputs:
       db_url: ${{ steps.neon.outputs.db_url }}
       branch_id: ${{ steps.neon.outputs.branch_id }}
