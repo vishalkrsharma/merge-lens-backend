@@ -1,0 +1,109 @@
+name: Neon DB Preview Branch
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches: [master]
+
+jobs:
+  # ── Create / update branch on open or push ────────────────────────────────
+  setup-branch:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    outputs:
+      db_url: ${{ steps.neon.outputs.db_url }}
+      branch_id: ${{ steps.neon.outputs.branch_id }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Neon preview branch
+        id: neon
+        uses: neondatabase/create-branch-action@v5
+        with:
+          project_id: ${{ secrets.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          # Reuses the same branch name across pushes to the same PR
+          branch_name: preview/${{ github.head_ref }}
+          database: neondb
+          username: neondb_owner
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply migrations to preview branch
+        run: pnpm migrate:deploy
+        env:
+          DATABASE_URL: ${{ steps.neon.outputs.db_url }}
+
+      - name: Comment branch URL on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = [
+              '### 🗄️ Neon Preview DB',
+              '',
+              `**Branch:** \`preview/${{ github.head_ref }}\``,
+              `**Branch ID:** \`${{ steps.neon.outputs.branch_id }}\``,
+              '',
+              'Migrations applied with `prisma migrate deploy`.',
+              '',
+              'Set this in your local `.env.local` to develop against this branch:',
+              '```',
+              `DATABASE_URL=${{ steps.neon.outputs.db_url }}`,
+              '```',
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c =>
+              c.user.login === 'github-actions[bot]' &&
+              c.body.includes('Neon Preview DB')
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+  # ── Delete branch on PR close ─────────────────────────────────────────────
+  delete-branch:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Delete Neon preview branch
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ secrets.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          branch: preview/${{ github.head_ref }}

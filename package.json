@@ -23,6 +23,9 @@
     "tunnel:up": "source ./.env.local && ngrok http --url=https://noncounterfeit-unshriven-thomasina.ngrok-free.dev $PORT",
     "github:jwt": "dotenv -e .env.local -- ts-node scripts/get-github-jwt.ts",
     "db:push": "dotenv -e .env.local -- prisma db push",
+    "db:preview": "bash scripts/use-preview-db.sh",
+    "hooks:install": "bash scripts/install-hooks.sh",
+    "migrate:deploy": "prisma migrate deploy",
     "db:reset": "dotenv -e .env.local -- ts-node scripts/clear-db.ts",
     "github:reset": "dotenv -e .env.local -- ts-node scripts/reset-github.ts"
   },
