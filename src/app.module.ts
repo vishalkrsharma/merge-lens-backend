@@ -10,7 +10,6 @@ import { AgentsModule } from './pipeline/agents/agents.module';
 import { AiReviewModule } from './pipeline/ai-review/ai-review.module';
 import { OrchestratorModule } from './pipeline/orchestrator/orchestrator.module';
 import { ReviewModule } from './pipeline/processor/review.module';
-import { RagModule } from './pipeline/rag/rag.module';
 import { CommentsModule } from './integrations/comments/comments.module';
 import { GithubModule } from './integrations/github/github.module';
 import { FindingsModule } from './modules/findings/findings.module';
@@ -46,7 +45,6 @@ import { RealtimeModule } from './core/realtime/realtime.module';
     AgentsModule,
     AiReviewModule,
     OrchestratorModule,
-    RagModule,
     ReviewModule,
     HealthModule,
     WebhooksModule,

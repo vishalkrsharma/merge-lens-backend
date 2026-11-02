@@ -5,7 +5,6 @@ import { GithubModule } from '@/integrations/github/github.module';
 import { ObservabilityModule } from '@/core/observability/observability.module';
 import { OrchestratorModule } from '@/pipeline/orchestrator/orchestrator.module';
 import { QueueModule } from '@/core/queue/queue.module';
-import { RagModule } from '@/pipeline/rag/rag.module';
 import { SettingsModule } from '@/modules/settings/settings.module';
 import { RealtimeModule } from '@/core/realtime/realtime.module';
 
@@ -15,7 +14,6 @@ import { RealtimeModule } from '@/core/realtime/realtime.module';
     GithubModule,
     CommentsModule,
     OrchestratorModule,
-    RagModule,
     ObservabilityModule,
     SettingsModule,
     RealtimeModule,

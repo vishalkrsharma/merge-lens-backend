@@ -11,7 +11,6 @@ import { OrchestratorService } from '@/pipeline/orchestrator/orchestrator.servic
 import { PrismaService } from '@/core/prisma/prisma.service';
 import { PG_BOSS } from '@/core/queue/queue.constants';
 import { REVIEW_QUEUE, ReviewJobData } from '@/core/queue/queue.constants';
-import { RetrievalService } from '@/pipeline/rag/retrieval.service';
 import { AgentType, Severity } from '@/generated/prisma/enums';
 import { ApiKeysService } from '@/modules/settings/api-keys.service';
 import { RealtimeService } from '@/core/realtime/realtime.service';
@@ -31,7 +30,6 @@ export class ReviewProcessor implements OnModuleInit {
     private readonly githubService: GithubService,
     private readonly orchestrator: OrchestratorService,
     private readonly commentsService: CommentsService,
-    private readonly retrieval: RetrievalService,
     private readonly prisma: PrismaService,
     private readonly appLogger: LoggerService,
     private readonly metrics: MetricsService,
@@ -149,15 +147,11 @@ export class ReviewProcessor implements OnModuleInit {
         .filter((n): n is string => typeof n === 'string');
       this.logger.log(`Fetched ${files.length} changed files`);
 
-      const docs = await this.retrieval.retrieve(diff.slice(0, 2000));
-      this.appLogger.ragRetrievalComplete(docs.length);
-
       const context: ReviewContext = {
         title: prDetails.title,
         description: prDetails.description,
         files: fileNames,
         diff,
-        docs,
       };
 
       repository = await this.prisma.repository.findUnique({
@@ -193,7 +187,10 @@ export class ReviewProcessor implements OnModuleInit {
         : [{}, null, []];
 
       const customPrompts = Object.fromEntries(
-        (agentPrompts as { agent: string; prompt: string }[]).map((r) => [r.agent, r.prompt]),
+        (agentPrompts as { agent: string; prompt: string }[]).map((r) => [
+          r.agent,
+          r.prompt,
+        ]),
       );
 
       const result = await this.orchestrator.execute(

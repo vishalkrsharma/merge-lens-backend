@@ -16,10 +16,6 @@ export class LoggerService {
     this.logger.log(`${name} agent starting`);
   }
 
-  ragRetrievalComplete(chunks: number) {
-    this.logger.log(`RAG retrieval completed: ${chunks} chunks`);
-  }
-
   postingComments(owner: string, repo: string, prNumber: number) {
     this.logger.log(`Posting comments to ${owner}/${repo}#${prNumber}`);
   }

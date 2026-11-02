@@ -3,7 +3,6 @@ export interface ReviewContext {
   description: string;
   files: string[];
   diff: string;
-  docs: string[];
 }
 
 export interface AgentFinding {
@@ -19,7 +18,12 @@ export interface AgentResponse {
   summary: string;
 }
 
-export type AgentName = 'bug' | 'security' | 'performance' | 'style' | 'summary';
+export type AgentName =
+  | 'bug'
+  | 'security'
+  | 'performance'
+  | 'style'
+  | 'summary';
 export type AgentPrompts = Record<AgentName, string>;
 
 export interface OrchestratorResult {

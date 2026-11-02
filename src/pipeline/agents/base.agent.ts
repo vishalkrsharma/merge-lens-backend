@@ -32,17 +32,12 @@ export abstract class BaseAgent {
     }
   }
 
-  protected buildDocsSection(docs: string[]): string {
-    if (docs.length === 0) return '';
-    return `Repository Context:\n${docs.join('\n\n')}\n\n`;
-  }
-
   protected buildReviewPrompt(
     instruction: string,
     context: ReviewContext,
     findingNoun: string,
   ): string {
-    return `${this.buildDocsSection(context.docs)}${instruction}
+    return `${instruction}
 
 PR Title: ${context.title}
 PR Description: ${context.description}
